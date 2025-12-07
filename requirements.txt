@@ -54,6 +54,7 @@ requests==2.32.5
 shellingham==1.5.4
 six==1.17.0
 stack-data==0.6.3
+tokenizers==0.22.1
 tornado==6.5.2
 tqdm==4.67.1
 traitlets==5.14.3
