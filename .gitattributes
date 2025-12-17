@@ -1,3 +1,1 @@
-data/dataset/python/valid.jsonl filter=lfs diff=lfs merge=lfs -text
-data/dataset/python/test.jsonl filter=lfs diff=lfs merge=lfs -text
-data/dataset/python/train.jsonl filter=lfs diff=lfs merge=lfs -text
+data/raw/dataset/python/train.jsonl filter=lfs diff=lfs merge=lfs -text
