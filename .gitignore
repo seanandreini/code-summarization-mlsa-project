@@ -1,6 +1,9 @@
 # Model checkpoints
 checkpoints/
 
+# processed data
+data/processed/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
