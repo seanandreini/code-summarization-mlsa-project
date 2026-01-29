@@ -16,7 +16,7 @@ The whole project contains not only the final models, but all the research done 
 
 ## Download
 
-To download everything necessary you can either clone the repository or download the compressed archive found under the [latest realease](https://github.com/seanandreini/code-summarization-mlsa-project/releases/latest). 
+To download everything necessary you can either clone the repository or download the compressed archive found under the [latest release](https://github.com/seanandreini/code-summarization-mlsa-project/releases/latest). 
 > [!NOTE]
 > Keep in my mind that, since the raw dataset is included in the repository, the download may take a while. The processed data is not present, there will be instructions on how to process it later on.
 
