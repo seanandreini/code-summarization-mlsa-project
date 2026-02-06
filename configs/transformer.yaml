@@ -4,10 +4,10 @@ test_data_length: 1000
 num_epochs: 100
 patience: 5
 checkpoint_dir: './../../checkpoints/transformer/01/'
-n_heads: 3
-d_model: 6
-ff_units: 10
+n_heads: 4
+d_model: 128
+ff_units: 768
 dropout: 0.1
 n_layers: 2
-learning_rate: 0.01
-batch_size: 8
+learning_rate: 0.0001
+batch_size: 16
