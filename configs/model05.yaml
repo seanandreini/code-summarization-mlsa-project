@@ -3,7 +3,7 @@ valid_data_length: 1000
 test_data_length: 1000
 num_epochs: 100
 patience: 5
-checkpoint_dir: './../../checkpoints/transformer/01/'
+checkpoint_dir: './../../checkpoints/notebooks/model05/'
 n_heads: 4
 d_model: 128
 ff_units: 768
