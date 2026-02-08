@@ -6,9 +6,9 @@ function to save a checkpoint of a model during training.
 it saves the model state dict, the optimizer state dict, 
 the epoch of the save, and the loss, in the directory specified in checkpoint_dir
 """
-def save_checkpoint(epoch, model, optimizer, val_loss, checkpoint_dir):
+def save_checkpoint(epoch, model, optimizer, val_loss, checkpoint_dir, is_best):
   os.makedirs(checkpoint_dir, exist_ok=True)
-  checkpoint_path = checkpoint_dir
+  checkpoint_path = checkpoint_dir + "best_model.pt" if is_best else "last_model.pt"
   torch.save({'epoch': epoch,
               'model_state_dict': model.state_dict(),
               'optimizer_state_dict': optimizer.state_dict(),
@@ -18,9 +18,10 @@ def save_checkpoint(epoch, model, optimizer, val_loss, checkpoint_dir):
 
 """
 loads a checkpoint. it gets the model and the optimizer, and returns the epoch and validation loss
+load_last makes it load the last checkpoint, if false it load the best
 """
-def load_checkpoint(model, optimizer, device, checkpoint_dir):
-  checkpoint_path = checkpoint_dir
+def load_checkpoint(model, optimizer, device, checkpoint_dir, load_last):
+  checkpoint_path = checkpoint_dir + "last_model.pt" if load_last else "best_model.pt"
   if(not os.path.exists(checkpoint_path)):
     print("No checkpoint found, starting from scratch")
     return None
