@@ -1,5 +1,7 @@
 import argparse
 import yaml
+import os
+
 DEFAULT_CONFIG_PATH = 'configs/models/'
 
 def main():
@@ -54,8 +56,19 @@ def main():
 		if(value is not None):
 			config[arg] = value
 
+	#* ___TRANSFORMER___
 	if args.model == 'transformer':
+		# check d_model n_heads
 		assert config['d_model'] % config['n_heads'] == 0, f"Error: d_model ({config['d_model']}) should be multiple of n_heads ({config['n_heads']})!"
+		
+		# tokenization
+		if not os.path.exists(config['processed_dataset_path']):
+			from preprocess import prepare_data
+			print("Processed data not found. Running tokenizer...")
+			prepare_data(config)
+
+		
+			
 
 
 if __name__ == "__main__":

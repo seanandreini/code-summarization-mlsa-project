@@ -11,3 +11,5 @@ batch_size: 16
 docstring_vocab_size: 10000
 docstring_vocab_min_frequency: 2
 checkpoint_dir: './../checkpoints/models/transformer/'
+raw_dataset_path: "./../../data/raw/dataset/python/"
+processed_dataset_path: "./../../data/processed/models/transformer/"
