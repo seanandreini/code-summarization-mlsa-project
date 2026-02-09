@@ -170,7 +170,8 @@ if __name__ == '__main__':
 	parser.add_argument(
 		'--config',
 		type=str,
-		required=True
+		required=True,
+		help='path to config file'
 	)
 	args = parser.parse_args()
 	with open(args.config) as f:

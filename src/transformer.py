@@ -121,7 +121,7 @@ class PositionalEncoding(nn.Module):
   def __init__(self, d_model, max_len=100):
     super().__init__()
     self.d_model = d_model
-    self.register_buffer('pe', self._create_pe(max_len, d_model))
+    self.register_buffer('pe', self._create_pe(max_len, d_model), persistent=False)
 
   def _create_pe(self, length, d_model):
     """Funzione helper per generare la matrice dei seni e coseni"""
@@ -138,8 +138,7 @@ class PositionalEncoding(nn.Module):
     # CONTROLLO DINAMICO: se x è più lungo di pe, espando pe
     if seq_len > self.pe.size(1):
       # Creiamo una nuova PE lunga quanto serve (o anche un po' di più per sicurezza)
-      new_pe = self._create_pe(seq_len, self.d_model).to(x.device)
-      self.register_buffer('pe', new_pe)
+      self.pe = self._create_pe(seq_len, self.d_model).to(x.device)
 
     scaled_x = x * np.sqrt(self.d_model)
     # Ora lo slicing [:seq_len] non andrà mai più in errore
@@ -351,3 +350,55 @@ class EncoderDecoderSelfAttn(nn.Module):
       outputs = self.predict(input_seq, source_mask)
 
     return outputs
+  
+class EncoderDecoderTransf(EncoderDecoderSelfAttn):
+    def __init__(self, encoder, decoder, src_vocab_size, tgt_vocab_size, tgt_bos_token_id, tgt_eos_token_id, max_pred_len=100):
+        super(EncoderDecoderTransf, self).__init__(encoder, decoder, max_pred_len, tgt_bos_token_id, tgt_eos_token_id)
+        self.src_embed = nn.Embedding(src_vocab_size, encoder.d_model)
+        self.tgt_embed = nn.Embedding(tgt_vocab_size, decoder.d_model)
+        self.linear = nn.Linear(decoder.d_model, tgt_vocab_size)
+
+    def encode(self, source_seq, source_mask=None):
+        # Projection
+        source_embedded = self.src_embed(source_seq)
+        encoder_states = self.encoder(source_embedded, source_mask)
+        self.decoder.init_keys(encoder_states)
+
+    def decode(self, shifted_target_seq, source_mask=None, target_mask=None):
+        # Projection
+        target_embedded = self.tgt_embed(shifted_target_seq)
+        outputs = self.decoder(target_embedded,
+                               source_mask=source_mask,
+                               target_mask=target_mask)
+        # Linear
+        outputs = self.linear(outputs)
+        return outputs
+  
+def build_transformer_model(
+    config,
+    src_vocab_size,
+    tgt_vocab_size,
+    tgt_pad_token_id,
+    tgt_bos_token_id,
+    tgt_eos_token_id
+  ):
+  torch.manual_seed(config['seed'])
+  # Layers
+  enclayer = EncoderLayer(n_heads=config['n_heads'], d_model=config['d_model'], ff_units=config['ff_units'], dropout=config['dropout'])
+  declayer = DecoderLayer(n_heads=config['n_heads'], d_model=config['d_model'], ff_units=config['ff_units'], dropout=config['dropout'])
+  # Encoder and Decoder
+  enctransf = EncoderTransf(enclayer, n_layers=config['num_layers'])
+  dectransf = DecoderTransf(declayer, n_layers=config['num_layers'])
+  # Transformer
+  model = EncoderDecoderTransf(
+    enctransf, 
+    dectransf, 
+    src_vocab_size=src_vocab_size, 
+    tgt_vocab_size=tgt_vocab_size,
+    tgt_bos_token_id=tgt_bos_token_id,
+    tgt_eos_token_id=tgt_eos_token_id,
+    max_pred_len=100)
+  loss = nn.CrossEntropyLoss(ignore_index=tgt_pad_token_id)
+  optimizer = torch.optim.Adam(model.parameters(), lr=config['learning_rate'])
+
+  return model, optimizer, loss

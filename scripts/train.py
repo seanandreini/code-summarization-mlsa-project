@@ -10,12 +10,14 @@ from scripts.preprocess import prepare_data
 from src.data_manager import get_dataloaders
 from src.lstm import build_lstm_model
 from src.utils import load_checkpoint, save_checkpoint
+from src.transformer import build_transformer_model
 
 DEFAULT_CONFIG_PATH = 'configs/models/'
 
 def train_one_epoch(config, model, optimizer, loss, train_dataloader, src_pad_token_id):
 	model.train()
-	batch_losses = []
+	total_loss = 0.0
+	loss_counter = 0
 	for input, labels in train_dataloader:
 		input = input.to(config['device'], non_blocking=True)
 		labels = labels.to(config['device'], non_blocking=True)
@@ -28,23 +30,34 @@ def train_one_epoch(config, model, optimizer, loss, train_dataloader, src_pad_to
 		single_loss = loss(y_pred, labels)
 		single_loss.backward()
 		optimizer.step()
-		batch_losses.append(single_loss.item())
+		total_loss += single_loss.item()
+		loss_counter += 1
 	
-	return sum(batch_losses)/len(batch_losses)
+	del single_loss
+	del y_pred
+	del input
+	del labels
+	return total_loss/loss_counter
 
 def validate(config, model, loss, valid_dataloader):
 	model.eval()
 	with torch.no_grad():
-		val_losses = []
+		total_loss = 0.0
+		loss_counter = 0
 		for input, labels in valid_dataloader:
 			input = input.to(config['device'], non_blocking=True)
 			labels = labels.to(config['device'], non_blocking=True)
 			y_pred = model(input, labels)
 			y_pred = y_pred.permute(0, 2, 1)  # N, V, L
 			single_loss = loss(y_pred, labels)
-			val_losses.append(single_loss.item())
+			total_loss += single_loss.item()
+			loss_counter += 1
 	
-	return sum(val_losses)/len(val_losses)
+	del single_loss
+	del y_pred
+	del input
+	del labels
+	return total_loss/loss_counter
 
 def main():
 	parser = argparse.ArgumentParser(description="Code Summarization Training Script")
@@ -99,7 +112,7 @@ def main():
 		if(value is not None):
 			config[arg] = value
 
-	config['device'] = 'cuda' if torch.cuda.is_available() else 'cpu'
+	config['device'] = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
 
 	# check d_model n_heads if transformer
 	if args.model == 'transformer':
@@ -141,16 +154,29 @@ def main():
 			tgt_eos_token_id=tgt_tokenizer.eos_token_id,
 			tgt_pad_token_id=tgt_tokenizer.pad_token_id,
 		)
+	else:
+		model, optimizer, loss = build_transformer_model(
+			config=config,
+			src_vocab_size=len(src_dictionary),
+			tgt_vocab_size=tgt_tokenizer.vocab_size,
+			tgt_pad_token_id=tgt_tokenizer.pad_token_id,
+			tgt_bos_token_id=tgt_tokenizer.bos_token_id,
+			tgt_eos_token_id=tgt_tokenizer.eos_token_id
+		)
 
 	epochs = config['epochs']
 
 	model.to(config['device'])
-	best_loss = float('inf')
+	
 	since_best = 0
 
-	print("Starting training...")
-	return
 	start_epoch, best_loss = load_checkpoint(model, optimizer, config['device'], config['checkpoint_dir'], True)
+	if start_epoch is None:
+		print("Checkpoint not found, starting from scratch...")
+		best_loss = float('inf')
+		start_epoch=0
+	else: print(f"Starting training from epoch {start_epoch+1}")
+
 	for epoch in range(start_epoch+1, epochs):
 		train_loss = train_one_epoch(
 			config=config,
@@ -172,10 +198,12 @@ def main():
 			print(f"Epoch {epoch}, Training Loss: {train_loss:10.8f}\nValid Loss: {valid_loss:10.8f}")
 		
 
+
+		save_checkpoint(epoch, model, optimizer, best_loss, config['checkpoint_dir'], False)
 		if(valid_loss < best_loss):
 			best_loss = valid_loss
 			since_best = 0
-			save_checkpoint(epoch, model, optimizer, best_loss, config['checkpoint_dir'])
+			save_checkpoint(epoch, model, optimizer, best_loss, config['checkpoint_dir'], True)
 			print(f"Saved new best model (epoch {epoch})")
 			
 		else:
@@ -185,10 +213,7 @@ def main():
 				break
 		
 		torch.cuda.empty_cache() # clears GPU memory
-		del single_loss
-		del y_pred
-		del input
-		del labels
+		torch.mps.empty_cache()
 
 	print("Training ended.")
 

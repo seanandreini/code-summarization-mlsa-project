@@ -8,7 +8,7 @@ the epoch of the save, and the loss, in the directory specified in checkpoint_di
 """
 def save_checkpoint(epoch, model, optimizer, val_loss, checkpoint_dir, is_best):
   os.makedirs(checkpoint_dir, exist_ok=True)
-  checkpoint_path = checkpoint_dir + "best_model.pt" if is_best else "last_model.pt"
+  checkpoint_path = checkpoint_dir + ("best_model.pt" if is_best else "last_model.pt")
   torch.save({'epoch': epoch,
               'model_state_dict': model.state_dict(),
               'optimizer_state_dict': optimizer.state_dict(),
@@ -21,10 +21,10 @@ loads a checkpoint. it gets the model and the optimizer, and returns the epoch a
 load_last makes it load the last checkpoint, if false it load the best
 """
 def load_checkpoint(model, optimizer, device, checkpoint_dir, load_last):
-  checkpoint_path = checkpoint_dir + "last_model.pt" if load_last else "best_model.pt"
+  checkpoint_path = checkpoint_dir + ("last_model.pt" if load_last else "best_model.pt")
   if(not os.path.exists(checkpoint_path)):
     print("No checkpoint found, starting from scratch")
-    return None
+    return None, None
   
   checkpoint = torch.load(checkpoint_path, map_location=device)
   model.load_state_dict(checkpoint['model_state_dict'])
