@@ -9,7 +9,7 @@ import torch
 from scripts.preprocess import prepare_data
 from src.data_manager import get_dataloaders
 from src.lstm import build_lstm_model
-from src.utils import load_checkpoint, save_checkpoint
+from src.utils import load_checkpoint, save_checkpoint, set_seed
 from src.transformer import build_transformer_model
 
 DEFAULT_CONFIG_PATH = 'configs/models/'
@@ -142,6 +142,7 @@ def main():
 			config[arg] = value
 
 	config['device'] = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
+	set_seed(config['seed'])
 
 	# check d_model n_heads if transformer
 	if args.model == 'transformer':

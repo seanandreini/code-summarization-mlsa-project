@@ -375,7 +375,6 @@ class EncoderDecoderTransf(EncoderDecoderSelfAttn):
 				return outputs
 	
 def build_transformer_model(config):
-	torch.manual_seed(config['seed'])
 	# Layers
 	enclayer = EncoderLayer(n_heads=config['n_heads'], d_model=config['d_model'], ff_units=config['ff_units'], dropout=config['dropout'])
 	declayer = DecoderLayer(n_heads=config['n_heads'], d_model=config['d_model'], ff_units=config['ff_units'], dropout=config['dropout'])

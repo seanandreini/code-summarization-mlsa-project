@@ -1,6 +1,8 @@
 import os
 import torch
 import ast
+import random
+import numpy as np
 
 """
 function to save a checkpoint of a model during training.
@@ -98,3 +100,10 @@ def encode_code_to_ids(code_string, src_dictionary):
   linearized_tree = []
   linearize_ast(code_to_ast(code_string), linearized_tree)
   return [src_dictionary.token2id.get(token, src_dictionary.token2id['[UNK]']) for token in linearized_tree]
+
+def set_seed(seed=42):
+  random.seed(seed)
+  np.random.seed(seed)
+  torch.manual_seed(seed)
+  torch.cuda.manual_seed(seed)
+  torch.cuda.manual_seed_all(seed) # per multi-GPU

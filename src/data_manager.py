@@ -43,7 +43,6 @@ def get_dataloaders(config, src_dictionary, tgt_tokenizer, dataset):
 
 	generator = torch.Generator()
 	generator.manual_seed(config['seed'])
-	torch.manual_seed(config['seed'])
 
 	train_dataset = dataset['train'].select(range(config['train_samples']))
 	valid_dataset = dataset['valid'].select(range(config['valid_samples']))
