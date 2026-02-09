@@ -374,14 +374,7 @@ class EncoderDecoderTransf(EncoderDecoderSelfAttn):
 				outputs = self.linear(outputs)
 				return outputs
 	
-def build_transformer_model(
-		config,
-		src_vocab_size,
-		tgt_vocab_size,
-		tgt_pad_token_id,
-		tgt_bos_token_id,
-		tgt_eos_token_id
-	):
+def build_transformer_model(config):
 	torch.manual_seed(config['seed'])
 	# Layers
 	enclayer = EncoderLayer(n_heads=config['n_heads'], d_model=config['d_model'], ff_units=config['ff_units'], dropout=config['dropout'])
@@ -393,18 +386,18 @@ def build_transformer_model(
 	model = EncoderDecoderTransf(
 		enctransf, 
 		dectransf, 
-		src_vocab_size=src_vocab_size, 
-		tgt_vocab_size=tgt_vocab_size,
-		tgt_bos_token_id=tgt_bos_token_id,
-		tgt_eos_token_id=tgt_eos_token_id,
+		src_vocab_size=config['src_vocab_size'], 
+		tgt_vocab_size=config['tgt_vocab_size'],
+		tgt_bos_token_id=config['tgt_bos_token_id'],
+		tgt_eos_token_id=config['tgt_eos_token_id'],
 		max_pred_len=100)
-	loss = nn.CrossEntropyLoss(ignore_index=tgt_pad_token_id)
+	loss = nn.CrossEntropyLoss(ignore_index=config['tgt_pad_token_id'])
 	optimizer = torch.optim.Adam(model.parameters(), lr=config['learning_rate'])
 
 	return model, optimizer, loss
 
 """function to predict the ids from an input sequence (returns the ids, not the decoded string)"""
-def predict_ids(model, input_seq, src_pad_token_id, tgt_bos_token_id, tgt_eos_token_ids, max_length=50):
+def predict_ids(model, input_seq, config, max_length=50):
 	if len(input_seq) == 0:
 			return None
 	model.eval()
@@ -412,13 +405,13 @@ def predict_ids(model, input_seq, src_pad_token_id, tgt_bos_token_id, tgt_eos_to
 
 	input_tensor = torch.tensor(input_seq, dtype=torch.long).unsqueeze(0).to(device)
 	
-	source_mask = (input_tensor != src_pad_token_id).unsqueeze(1)
+	source_mask = (input_tensor != config['src_pad_token_id']).unsqueeze(1)
 	with torch.no_grad():
 			encoder_memory = model.encode(input_tensor, source_mask)
 
 	# 2. Inizializziamo la sequenza col token BOS
 	# Per il Transformer, 'inputs' crescerà nel loop: [1, 1] -> [1, 2] -> [1, 3]...
-	inputs = torch.tensor([[tgt_bos_token_id]], dtype=torch.long).to(device)
+	inputs = torch.tensor([[config['tgt_bos_token_id']]], dtype=torch.long).to(device)
 
 	pred_ids = []
 	for i in range(max_length):
@@ -439,7 +432,7 @@ def predict_ids(model, input_seq, src_pad_token_id, tgt_bos_token_id, tgt_eos_to
 					probs = torch.softmax(logits / temperature, dim=-1)
 					next_token_id = torch.multinomial(probs, 1).item()
 
-			if next_token_id == tgt_eos_token_ids:
+			if next_token_id == config['tgt_eos_token_id']:
 					break
 					
 			pred_ids.append(next_token_id)

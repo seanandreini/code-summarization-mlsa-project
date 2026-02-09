@@ -4,7 +4,7 @@ from gensim.corpora import Dictionary
 from transformers import PreTrainedTokenizerFast
 import torch
 
-from src.utils import load_checkpoint, decode_ids
+from src.utils import load_checkpoint, decode_docstring_from_ids
 from src.lstm import build_lstm_model
 from src.transformer import build_transformer_model
 
@@ -27,21 +27,9 @@ def evaluate(config, dataloader):
 																			unk_token="[UNK]")
 
 	if config['model'] == 'lstm':
-		model, optimizer, loss = build_lstm_model(
-			config,
-			tgt_tokenizer.bos_token_id,
-			tgt_tokenizer.eos_token_id,
-			tgt_tokenizer.pad_token_id
-		)
+		model, optimizer, loss = build_lstm_model(config)
 	else:
-		model, optimizer, loss = build_transformer_model(
-			config,
-			len(src_dictionary),
-			tgt_tokenizer.vocab_size,
-			tgt_tokenizer.pad_token_id,
-			tgt_tokenizer.bos_token_id,
-			tgt_tokenizer.eos_token_id
-		)
+		model, optimizer, loss = build_transformer_model(config)
 
 	load_checkpoint(model, optimizer, config['device'], config['checkpoint_dir'], config['exp_name'], False)
 	model.eval()
@@ -74,8 +62,8 @@ def evaluate(config, dataloader):
 			
 			if pred_ids == None:
 				continue
-			pred_tokens  = decode_ids(pred_ids, tgt_tokenizer)
-			labels_tokens = decode_ids(labels[i].tolist(), tgt_tokenizer)
+			pred_tokens  = decode_docstring_from_ids(pred_ids, tgt_tokenizer)
+			labels_tokens = decode_docstring_from_ids(labels[i].tolist(), tgt_tokenizer)
 
 			#print("Predicted Docstring: ", ' '.join(pred_tokens))
 			#print("Actual Docstring:    ", ' '.join(labels_tokens))
@@ -132,6 +120,6 @@ if __name__ == '__main__':
 		tgt_tokenizer=tgt_tokenizer,
 		dataset=dataset
 	)
-	evaluate(config, valid_dataloader)
+	evaluate(config, test_dataloader)
 
 	#7.12409

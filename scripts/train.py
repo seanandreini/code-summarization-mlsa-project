@@ -25,12 +25,13 @@ def train_one_epoch(config, model, optimizer, loss, train_dataloader, src_pad_to
 		if config['model'] == 'transformer':
 			dec_input = labels[:, :-1]
 			targets = labels[:, 1:]
+			source_mask = (input != src_pad_token_id).unsqueeze(1)
 		else:
 			dec_input = targets = labels
+			source_mask = None
 
 		optimizer.zero_grad()
 
-		source_mask = (input != src_pad_token_id).unsqueeze(1)
 
 		y_pred = model(input, target_seq=dec_input, source_mask=source_mask)
 		y_pred = y_pred.permute(0, 2, 1)  # N, V, L
@@ -46,7 +47,7 @@ def train_one_epoch(config, model, optimizer, loss, train_dataloader, src_pad_to
 	del labels
 	return total_loss/loss_counter
 
-def validate(config, model, loss, valid_dataloader):
+def validate(config, model, loss, valid_dataloader, src_pad_token_id):
 	model.eval()
 	with torch.no_grad():
 		total_loss = 0.0
@@ -54,9 +55,16 @@ def validate(config, model, loss, valid_dataloader):
 		for input, labels in valid_dataloader:
 			input = input.to(config['device'])
 			labels = labels.to(config['device'])
-			y_pred = model(input, labels)
+			if config['model'] == 'transformer':
+				dec_input = labels[:, :-1]
+				targets = labels[:, 1:]
+				source_mask = (input != src_pad_token_id).unsqueeze(1)
+			else:
+				dec_input = targets = labels
+				source_mask = None
+			y_pred = model(input, target_seq=dec_input, source_mask=source_mask)
 			y_pred = y_pred.permute(0, 2, 1)  # N, V, L
-			single_loss = loss(y_pred, labels)
+			single_loss = loss(y_pred, targets)
 			total_loss += single_loss.item()
 			loss_counter += 1
 	
@@ -148,12 +156,19 @@ def main():
 	# loads processed data and dictionary/tokenizer
 	dataset = load_from_disk(config['processed_dataset_path'])
 	src_dictionary = Dictionary.load(config['processed_dataset_path']+'code_dictionary.pt')
-	config['code_vocab_size'] = len(src_dictionary.token2id)
 	tgt_tokenizer = PreTrainedTokenizerFast(tokenizer_file=config['processed_dataset_path']+'bpe_tokenizer.json',
 																			pad_token="[PAD]",
 																			bos_token="[BOS]",
 																			eos_token="[EOS]",
 																			unk_token="[UNK]")
+	
+	config['src_vocab_size'] = len(src_dictionary.token2id)
+	config['tgt_vocab_size'] = tgt_tokenizer.vocab_size
+	config['tgt_pad_token_id'] = tgt_tokenizer.pad_token_id
+	config['tgt_bos_token_id'] = tgt_tokenizer.bos_token_id
+	config['tgt_eos_token_id'] = tgt_tokenizer.eos_token_id
+	config['src_pad_token_id'] = src_dictionary.token2id['[PAD]']
+
 	# creates id2token
 	src_dictionary.id2token = {
 			v: k for k, v in src_dictionary.token2id.items()
@@ -169,21 +184,9 @@ def main():
 
 	# gets model for training
 	if config['model'] == 'lstm':
-		model, optimizer, loss = build_lstm_model(
-			config=config,
-			tgt_bos_token_id=tgt_tokenizer.bos_token_id,
-			tgt_eos_token_id=tgt_tokenizer.eos_token_id,
-			tgt_pad_token_id=tgt_tokenizer.pad_token_id,
-		)
+		model, optimizer, loss = build_lstm_model(config)
 	else:
-		model, optimizer, loss = build_transformer_model(
-			config=config,
-			src_vocab_size=len(src_dictionary),
-			tgt_vocab_size=tgt_tokenizer.vocab_size,
-			tgt_pad_token_id=tgt_tokenizer.pad_token_id,
-			tgt_bos_token_id=tgt_tokenizer.bos_token_id,
-			tgt_eos_token_id=tgt_tokenizer.eos_token_id
-		)
+		model, optimizer, loss = build_transformer_model(config)
 
 	epochs = config['epochs']
 
@@ -191,7 +194,7 @@ def main():
 	
 	since_best = 0
 
-	start_epoch, best_loss = load_checkpoint(model, optimizer, config['device'], config['checkpoint_dir'], config['exp_name'], True)
+	model, optimizer, start_epoch, best_loss = load_checkpoint(model, optimizer, config, True)
 	if start_epoch is None:
 		best_loss = float('inf')
 		start_epoch=0
@@ -213,7 +216,8 @@ def main():
 			config=config,
 			model=model,
 			loss=loss,
-			valid_dataloader=valid_dataloader
+			valid_dataloader=valid_dataloader,
+			src_pad_token_id=src_dictionary.token2id['[PAD]']
 		)
 		
 		if(epoch == 1 or epoch % 5 == 0):
@@ -221,11 +225,11 @@ def main():
 		
 
 
-		save_checkpoint(epoch, model, optimizer, best_loss, config['checkpoint_dir'], config['exp_name'], False)
+		save_checkpoint(epoch, model, optimizer, best_loss, config, False)
 		if(valid_loss < best_loss):
 			best_loss = valid_loss
 			since_best = 0
-			save_checkpoint(epoch, model, optimizer, best_loss, config['checkpoint_dir'], config['exp_name'], True)
+			save_checkpoint(epoch, model, optimizer, best_loss, config, True)
 			print(f"Saved new best model (epoch {epoch}) with valid loss: {best_loss:10.8f}")
 			
 		else:

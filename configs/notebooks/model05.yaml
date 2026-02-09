@@ -5,8 +5,8 @@ num_epochs: 100
 patience: 5
 checkpoint_dir: './../../checkpoints/notebooks/model05/'
 n_heads: 4
-d_model: 256
-ff_units: 1024
+d_model: 128
+ff_units: 512
 dropout: 0.1
 n_layers: 2
 learning_rate: 0.0001

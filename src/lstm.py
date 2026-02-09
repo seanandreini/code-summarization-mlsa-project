@@ -148,11 +148,7 @@ class EncoderDecoderAttn(nn.Module):
 		return self.outputs
 	
 """setups the model, returns model, optimizer and loss"""
-def build_lstm_model(
-		config, 
-		tgt_bos_token_id,
-		tgt_eos_token_id,
-		tgt_pad_token_id):
+def build_lstm_model(config):
 	embedding_dim = config['embedding_dim']
 	hidden_dim = config['hidden_dim']
 
@@ -170,9 +166,9 @@ def build_lstm_model(
 		hidden_dim=hidden_dim,
 		num_layers=config['num_layers'],
 		dropout=config['dropout'],
-		bos_id=tgt_bos_token_id,
-		eos_id=tgt_eos_token_id,
-		pad_id=tgt_pad_token_id
+		bos_id=config['tgt_bos_token_id'],
+		eos_id=config['tgt_eos_token_id'],
+		pad_id=config['tgt_pad_token_id']
 	)
 
 	model = EncoderDecoderAttn(
@@ -181,7 +177,7 @@ def build_lstm_model(
 		teacher_forcing_prob=config['teacher_forcing_prob']
 	)
 
-	loss = nn.CrossEntropyLoss(ignore_index=tgt_pad_token_id)
+	loss = nn.CrossEntropyLoss(ignore_index=config['tgt_pad_token_id'])
 	optimizer = torch.optim.Adam(model.parameters(), lr=config['learning_rate'])
 
 	return model, optimizer, loss

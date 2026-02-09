@@ -1,5 +1,4 @@
 from datasets import load_dataset, Dataset, DatasetDict
-import ast
 from gensim import corpora
 import os
 from tokenizers import Tokenizer
@@ -8,37 +7,7 @@ from tokenizers.trainers import BpeTrainer
 from tokenizers.pre_tokenizers import Whitespace
 from tokenizers.normalizers import NFD, Lowercase, StripAccents, Sequence
 
-"""function to convert code string to AST"""
-def code_to_ast(code_string):
-	try:
-		return ast.parse(code_string)
-	except SyntaxError:
-		return None # some code snippets are not valid (python 2 instead of python 3)
-	
-"""linearizing the AST (with SBT, Structure Based Traversal)"""
-def linearize_ast(node, tokens):
-	if node is None:
-		return
-
-	node_type = type(node).__name__
-	
-	# open node
-	tokens.append(f"({node_type}")
-
-	# additional information
-	if isinstance(node, ast.FunctionDef):
-		tokens.append(f"FUNC_{node.name}")
-	elif isinstance(node, ast.arg):
-		tokens.append(f"ARG_{node.arg}")
-	elif isinstance(node, ast.NamedExpr):
-		tokens.append(f"VAR:{node.id}")
-
-	# recursive traversal
-	for child in ast.iter_child_nodes(node):
-		linearize_ast(child, tokens)
-
-	# close the node
-	tokens.append(f"){node_type}")
+from src.utils import code_to_ast, linearize_ast
 
 """main function to tokenize the dataset (ast for code and bpe for docstrings)"""
 def prepare_data(config):
