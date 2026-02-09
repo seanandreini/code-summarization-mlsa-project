@@ -176,4 +176,4 @@ if __name__ == '__main__':
 	args = parser.parse_args()
 	with open(args.config) as f:
 		config = yaml.safe_load(f)
-		prepare_data(config)
+	prepare_data(config)

@@ -19,15 +19,22 @@ def train_one_epoch(config, model, optimizer, loss, train_dataloader, src_pad_to
 	total_loss = 0.0
 	loss_counter = 0
 	for input, labels in train_dataloader:
-		input = input.to(config['device'], non_blocking=True)
-		labels = labels.to(config['device'], non_blocking=True)
+		input = input.to(config['device'])
+		labels = labels.to(config['device'])
+
+		if config['model'] == 'transformer':
+			dec_input = labels[:, :-1]
+			targets = labels[:, 1:]
+		else:
+			dec_input = targets = labels
+
 		optimizer.zero_grad()
 
 		source_mask = (input != src_pad_token_id).unsqueeze(1)
 
-		y_pred = model(input, labels, source_mask=source_mask)
+		y_pred = model(input, target_seq=dec_input, source_mask=source_mask)
 		y_pred = y_pred.permute(0, 2, 1)  # N, V, L
-		single_loss = loss(y_pred, labels)
+		single_loss = loss(y_pred, targets)
 		single_loss.backward()
 		optimizer.step()
 		total_loss += single_loss.item()
@@ -45,8 +52,8 @@ def validate(config, model, loss, valid_dataloader):
 		total_loss = 0.0
 		loss_counter = 0
 		for input, labels in valid_dataloader:
-			input = input.to(config['device'], non_blocking=True)
-			labels = labels.to(config['device'], non_blocking=True)
+			input = input.to(config['device'])
+			labels = labels.to(config['device'])
 			y_pred = model(input, labels)
 			y_pred = y_pred.permute(0, 2, 1)  # N, V, L
 			single_loss = loss(y_pred, labels)
@@ -68,19 +75,20 @@ def main():
 		required=True,
 		choices=['transformer', 'lstm']
 	)
+	parser.add_argument('--exp_name', type=str, default='default')
 
 	# common args
-	parser.add_argument('--train_samples', type=int)
 	parser.add_argument('--valid_samples', type=int)
 	parser.add_argument('--test_samples', type=int)
 	parser.add_argument('--epochs', type=int,)
 	parser.add_argument('--batch_size', type=int)
-	parser.add_argument('--lr', type=float)
-	parser.add_argument('--n_layers', type=int)
+	parser.add_argument('--learning_rate', type=float)
+	parser.add_argument('--num_layers', type=int)
 	parser.add_argument('--patience', type=int)
 	parser.add_argument('--dropout', type=float)
 	parser.add_argument('--config', type=str)
 	parser.add_argument('--seed', type=int)
+	parser.add_argument('--checkpoint_dir', type=str)
 	
 	# lstm args
 	parser.add_argument('--embedding_dim', type=int)
@@ -100,7 +108,20 @@ def main():
 		config = yaml.safe_load(f)
 
 	# override parameters passed as args choosing the one needed based on model
-	valid_args = ['model', 'train_samples', 'valid_samples', 'test_samples' 'epochs', 'batch_size', 'lr', 'num_layers', 'patience', 'dropout', 'seed']
+	valid_args = [
+		'model', 
+		'train_samples', 
+		'valid_samples', 
+		'test_samples' 
+		'epochs', 
+		'batch_size', 
+		'lr', 
+		'num_layers', 
+		'patience', 
+		'dropout', 
+		'seed', 
+		'exp_name', 
+		'checkpoint_dir']
 
 	if args.model == 'lstm':
 		valid_args.extend(['embedding_dim', 'hidden_dim', 'teacher_forcing_prob'])
@@ -117,7 +138,7 @@ def main():
 	# check d_model n_heads if transformer
 	if args.model == 'transformer':
 		assert config['d_model'] % config['n_heads'] == 0, f"Error: d_model ({config['d_model']}) should be multiple of n_heads ({config['n_heads']})!"
-		
+
 	# tokenization
 	if not os.path.exists(config['processed_dataset_path']):
 		print("Processed data not found. Running tokenizer...")
@@ -170,12 +191,13 @@ def main():
 	
 	since_best = 0
 
-	start_epoch, best_loss = load_checkpoint(model, optimizer, config['device'], config['checkpoint_dir'], True)
+	start_epoch, best_loss = load_checkpoint(model, optimizer, config['device'], config['checkpoint_dir'], config['exp_name'], True)
 	if start_epoch is None:
-		print("Checkpoint not found, starting from scratch...")
 		best_loss = float('inf')
 		start_epoch=0
-	else: print(f"Starting training from epoch {start_epoch+1}")
+		
+
+	print(f"Starting training from epoch {start_epoch+1}")
 
 	for epoch in range(start_epoch+1, epochs):
 		train_loss = train_one_epoch(
@@ -199,12 +221,12 @@ def main():
 		
 
 
-		save_checkpoint(epoch, model, optimizer, best_loss, config['checkpoint_dir'], False)
+		save_checkpoint(epoch, model, optimizer, best_loss, config['checkpoint_dir'], config['exp_name'], False)
 		if(valid_loss < best_loss):
 			best_loss = valid_loss
 			since_best = 0
-			save_checkpoint(epoch, model, optimizer, best_loss, config['checkpoint_dir'], True)
-			print(f"Saved new best model (epoch {epoch})")
+			save_checkpoint(epoch, model, optimizer, best_loss, config['checkpoint_dir'], config['exp_name'], True)
+			print(f"Saved new best model (epoch {epoch}) with valid loss: {best_loss:10.8f}")
 			
 		else:
 			since_best += 1
@@ -212,8 +234,8 @@ def main():
 				print("Early stopping")
 				break
 		
-		torch.cuda.empty_cache() # clears GPU memory
-		torch.mps.empty_cache()
+		if config['device'] == 'cuda': torch.cuda.empty_cache() # clears GPU memory
+		elif config['device'] == 'mps': torch.mps.empty_cache()
 
 	print("Training ended.")
 

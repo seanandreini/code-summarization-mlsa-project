@@ -1,6 +1,7 @@
-train_samples: 1000
-valid_samples: 200
-test_samples: 200
+model: 'transformer'
+train_samples: 5000
+valid_samples: 1000
+test_samples: 1000
 epochs: 100
 patience: 5
 n_heads: 4
@@ -9,10 +10,10 @@ ff_units: 768
 dropout: 0.1
 num_layers: 2
 learning_rate: 0.0001
-batch_size: 16
+batch_size: 8
 docstring_vocab_size: 10000
 docstring_vocab_min_frequency: 2
 seed: 42
-checkpoint_dir: './checkpoints/models/'
+checkpoint_dir: './checkpoints/models/transformer/'
 raw_dataset_path: "./data/raw/dataset/python/"
 processed_dataset_path: "./data/processed/models/"

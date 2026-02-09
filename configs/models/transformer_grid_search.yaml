@@ -1,0 +1,14 @@
+fixed:
+  model: "transformer"
+  epochs: 50
+  patience: 5
+  n_heads: 8
+  train_samples: 100
+  valid_samples: 2
+  test_samples: 2
+  checkpoint_dir: "checkpoints/models/transformer/grid_search/"
+
+search_parameters:
+  learning_rate: [0.0001, 0.00005]
+  num_layers: [4, 6]
+  d_model: [256, 512]
