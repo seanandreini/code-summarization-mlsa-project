@@ -7,14 +7,14 @@ torch.cuda.empty_cache() # clears GPU memory
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 class Encoder(nn.Module):
-	def __init__(self, vocab_size, embedding_dim, hidden_dim, dropout=0.2):
+	def __init__(self, vocab_size, embedding_dim, hidden_dim, num_layers, dropout=0.2):
 		super().__init__()
 		self.hidden_dim = hidden_dim
 		self.embedding = nn.Embedding(vocab_size, embedding_dim)
 		self.embedding_dim = embedding_dim
 		self.hidden = None # final hidden state
 		self.cell = None
-		self.basic_rnn = nn.LSTM(self.embedding_dim, self.hidden_dim, dropout=dropout, batch_first=True) # NLF
+		self.basic_rnn = nn.LSTM(self.embedding_dim, self.hidden_dim, num_layers=num_layers, dropout=dropout if num_layers > 1 else 0, batch_first=True) # NLF
 
 	def forward(self, X):
 		embedded = self.embedding(X)
@@ -60,7 +60,7 @@ class Attention(nn.Module):
 		return context
 	
 class Decoder(nn.Module):
-	def __init__(self, vocab_size, embedding_dim, hidden_dim, bos_id, eos_id, pad_id, dropout = 0.2):
+	def __init__(self, vocab_size, embedding_dim, hidden_dim, bos_id, eos_id, pad_id, num_layers, dropout):
 		super().__init__()
 		self.hidden_dim = hidden_dim
 		self.embedding = nn.Embedding(vocab_size, embedding_dim)
@@ -71,13 +71,15 @@ class Decoder(nn.Module):
 		self.bos_id = bos_id
 		self.eos_id = eos_id
 		self.pad_id = pad_id
+		self.num_layers = num_layers
 		self.attention = Attention(hidden_dim)
-		self.basic_rnn = nn.LSTM(self.embedding_dim, self.hidden_dim, dropout=dropout, batch_first=True) # NLF
+		self.basic_rnn = nn.LSTM(self.embedding_dim, self.hidden_dim, num_layers=self.num_layers, dropout=dropout if self.num_layers > 1 else 0, batch_first=True) # NLF
 		self.output_layer = nn.Linear(2*self.hidden_dim, self.vocab_size) # 2* because of context+query
 
 	def init_hidden(self, encoder_states):
 		self.hidden, self.cell = encoder_states
-		self.attention.init_keys(encoder_states[0].permute(1,0,2)) # attention wants batch first
+		last_layer_hidden = self.hidden[-1:]
+		self.attention.init_keys(last_layer_hidden.permute(1,0,2)) # attention wants batch first
 
 	def forward(self, X, mask=None):
 		# X is N, 1, F
@@ -126,7 +128,7 @@ class EncoderDecoderAttn(nn.Module):
 		encoder_outputs, (enc_hidden, enc_cell) = self.encoder(source_seq)
 
 		self.decoder.init_hidden((enc_hidden, enc_cell))
-		self.decoder.attention.init_keys(encoder_outputs)
+		#self.decoder.attention.init_keys(encoder_outputs)
 		self.init_outputs(batch_size, target_len)
 
 		dec_inputs = torch.full((batch_size, 1), 
@@ -157,13 +159,17 @@ def build_lstm_model(
 	encoder = Encoder(
 		vocab_size=config['code_vocab_size'],
 		embedding_dim=embedding_dim,
-		hidden_dim=hidden_dim
+		hidden_dim=hidden_dim,
+		num_layers=config['num_layers'],
+		dropout=config['dropout']
 	)
 
 	decoder = Decoder(
 		vocab_size=config['docstring_vocab_size'], 
 		embedding_dim=embedding_dim, 
 		hidden_dim=hidden_dim,
+		num_layers=config['num_layers'],
+		dropout=config['dropout'],
 		bos_id=tgt_bos_token_id,
 		eos_id=tgt_eos_token_id,
 		pad_id=tgt_pad_token_id

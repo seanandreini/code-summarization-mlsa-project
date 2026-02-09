@@ -45,7 +45,6 @@ def validate(config, model, loss, valid_dataloader):
 			val_losses.append(single_loss.item())
 	
 	return sum(val_losses)/len(val_losses)
-	
 
 def main():
 	parser = argparse.ArgumentParser(description="Code Summarization Training Script")
@@ -88,14 +87,12 @@ def main():
 		config = yaml.safe_load(f)
 
 	# override parameters passed as args choosing the one needed based on model
-	valid_args = ['train_samples', 'valid_samples', 'test_samples' 'epochs', 'batch_size', 'lr', 'n_layers', 'patience', 'dropout', 'seed']
+	valid_args = ['model', 'train_samples', 'valid_samples', 'test_samples' 'epochs', 'batch_size', 'lr', 'num_layers', 'patience', 'dropout', 'seed']
 
 	if args.model == 'lstm':
 		valid_args.extend(['embedding_dim', 'hidden_dim', 'teacher_forcing_prob'])
-		print('lstm')
 	else:
 		valid_args.extend(['n_heads', 'd_model', 'ff_units'])
-		print('transf')
 
 	for arg in valid_args:
 		value = getattr(args, arg, None)
@@ -116,9 +113,9 @@ def main():
 	print("Loading processed data...")
 	# loads processed data and dictionary/tokenizer
 	dataset = load_from_disk(config['processed_dataset_path'])
-	src_dictionary = Dictionary.load('./../../data/processed/notebooks/ast_BPE/code_dictionary.pt')
+	src_dictionary = Dictionary.load(config['processed_dataset_path']+'code_dictionary.pt')
 	config['code_vocab_size'] = len(src_dictionary.token2id)
-	tgt_tokenizer = PreTrainedTokenizerFast(tokenizer_file="../../data/processed/notebooks/ast_BPE/bpe_tokenizer.json",
+	tgt_tokenizer = PreTrainedTokenizerFast(tokenizer_file=config['processed_dataset_path']+'bpe_tokenizer.json',
 																			pad_token="[PAD]",
 																			bos_token="[BOS]",
 																			eos_token="[EOS]",
@@ -137,20 +134,22 @@ def main():
 	)
 
 	# gets model for training
-	model, optimizer, loss = build_lstm_model(
-		config=config,
-		tgt_bos_token_id=tgt_tokenizer.bos_token_id,
-		tgt_eos_token_id=tgt_tokenizer.eos_token_id,
-		tgt_pad_token_id=tgt_tokenizer.pad_token_id,
-	)
+	if config['model'] == 'lstm':
+		model, optimizer, loss = build_lstm_model(
+			config=config,
+			tgt_bos_token_id=tgt_tokenizer.bos_token_id,
+			tgt_eos_token_id=tgt_tokenizer.eos_token_id,
+			tgt_pad_token_id=tgt_tokenizer.pad_token_id,
+		)
 
-	epochs = config['num_epochs']
+	epochs = config['epochs']
 
 	model.to(config['device'])
 	best_loss = float('inf')
 	since_best = 0
 
 	print("Starting training...")
+	return
 	start_epoch, best_loss = load_checkpoint(model, optimizer, config['device'], config['checkpoint_dir'], True)
 	for epoch in range(start_epoch+1, epochs):
 		train_loss = train_one_epoch(
