@@ -116,9 +116,9 @@ def prepare_data(config):
 	#*___DOCSTRINGS___
 	print("Processing docstrings...")
 	# filter the database with only valid inputs
-	train_dataset['docstring_tokens'] = [train_dataset['docstring_tokens'][i] for i in train_valid_indices]
-	valid_dataset['docstring_tokens'] = [valid_dataset['docstring_tokens'][i] for i in valid_valid_indices]
-	test_dataset['docstring_tokens'] = [test_dataset['docstring_tokens'][i] for i in test_valid_indices]
+	train_dataset = train_dataset.select(train_valid_indices)
+	valid_dataset = valid_dataset.select(valid_valid_indices)
+	test_dataset = test_dataset.select(test_valid_indices)
 
 	# creates tokenizer
 	tokenizer = Tokenizer(BPE(unk_token="[UNK]"))
