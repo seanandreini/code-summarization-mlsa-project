@@ -45,3 +45,11 @@ To install the dependencies needed you must be placed in the main directory of t
 ```
 pip install -r requirements.txt
 ```
+
+>[!IMPORTANT]
+> If you want to use the GPU on a system with an Nvidia GPU you have to manually install pytorch with cuda
+> To do so after installing the requirements run this command:
+> ```pip uninstall torch torchvision torchaudio -y```
+> After that, run ```nvidia-smi``` and check which cuda version is installed in your system.
+> You then need to run:
+> ```pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cuXXX``` where XXX is your cuda version. For example, if you have cuda13.0 your command should be ```pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu130```
