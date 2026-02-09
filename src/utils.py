@@ -42,10 +42,10 @@ def load_checkpoint(model, optimizer, config, load_last, strict_config=True):
     config.update(checkpoint['config'])
     if config['model'] == 'lstm':
       from src.lstm import build_lstm_model
-      model, optimizer, _ = build_lstm_model(config)
+      model, optimizer, loss = build_lstm_model(config)
     else:
       from src.transformer import build_transformer_model
-      model, optimizer, _ = build_transformer_model(config)
+      model, optimizer, loss = build_transformer_model(config)
 
   model.load_state_dict(checkpoint['model_state_dict'])
   optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -57,7 +57,7 @@ def load_checkpoint(model, optimizer, config, load_last, strict_config=True):
     for k, v in state.items():
       if isinstance(v, torch.Tensor):
         state[k] = v.to(config['device'])
-  return model, optimizer, start_epoch, val_loss
+  return model, optimizer, start_epoch, val_loss, loss
 
 """function to convert code string to AST"""
 def code_to_ast(code_string):

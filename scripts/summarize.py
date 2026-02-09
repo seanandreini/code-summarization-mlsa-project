@@ -17,7 +17,7 @@ def main():
   config['exp_name'] = args.exp_name
   config['device'] = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
 
-  model, optimizer, _, _ =load_checkpoint(None, None, config, False, False)
+  model, _, _, _, _ =load_checkpoint(None, None, config, False, False)
   
   if(config['model'] == 'lstm'):
     from src.lstm import predict_ids

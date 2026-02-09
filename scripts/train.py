@@ -194,7 +194,7 @@ def main():
 	
 	since_best = 0
 
-	model, optimizer, start_epoch, best_loss = load_checkpoint(model, optimizer, config, True)
+	model, optimizer, start_epoch, best_loss, _ = load_checkpoint(model, optimizer, config, True)
 	if start_epoch is None:
 		best_loss = float('inf')
 		start_epoch=0
@@ -222,8 +222,6 @@ def main():
 		
 		if(epoch == 1 or epoch % 5 == 0):
 			print(f"Epoch {epoch}, Training Loss: {train_loss:10.8f}\nValid Loss: {valid_loss:10.8f}")
-		
-
 
 		save_checkpoint(epoch, model, optimizer, best_loss, config, False)
 		if(valid_loss < best_loss):

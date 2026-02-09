@@ -33,6 +33,8 @@ def main():
 			cmd.extend([f"--{key}", str(value)])
 		
 		subprocess.run(cmd)
+		
+		cmd = [sys.executable, '-m', 'scripts.evaluate']
 
 		
 

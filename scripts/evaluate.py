@@ -4,7 +4,7 @@ from gensim.corpora import Dictionary
 from transformers import PreTrainedTokenizerFast
 import torch
 
-from src.utils import load_checkpoint, decode_docstring_from_ids
+from src.utils import load_checkpoint, decode_ids_to_docstring
 from src.lstm import build_lstm_model
 from src.transformer import build_transformer_model
 
@@ -26,12 +26,8 @@ def evaluate(config, dataloader):
 																			eos_token="[EOS]",
 																			unk_token="[UNK]")
 
-	if config['model'] == 'lstm':
-		model, optimizer, loss = build_lstm_model(config)
-	else:
-		model, optimizer, loss = build_transformer_model(config)
 
-	load_checkpoint(model, optimizer, config['device'], config['checkpoint_dir'], config['exp_name'], False)
+	model, optimizer, _, _, loss = load_checkpoint(None, None, config, False, False)
 	model.eval()
 	model.to(config['device'])
 
@@ -58,12 +54,12 @@ def evaluate(config, dataloader):
 
 		for i in range(input.size(0)):
 			with torch.no_grad():
-				pred_ids = predict_ids(model, input[i].tolist(), src_dictionary.token2id['[PAD]'], tgt_tokenizer.bos_token_id, tgt_tokenizer.eos_token_id)
+				pred_ids = predict_ids(model, input[i].tolist(), config)
 			
 			if pred_ids == None:
 				continue
-			pred_tokens  = decode_docstring_from_ids(pred_ids, tgt_tokenizer)
-			labels_tokens = decode_docstring_from_ids(labels[i].tolist(), tgt_tokenizer)
+			pred_tokens  = decode_ids_to_docstring(pred_ids, tgt_tokenizer)
+			labels_tokens = decode_ids_to_docstring(labels[i].tolist(), tgt_tokenizer)
 
 			#print("Predicted Docstring: ", ' '.join(pred_tokens))
 			#print("Actual Docstring:    ", ' '.join(labels_tokens))
@@ -81,6 +77,18 @@ def evaluate(config, dataloader):
 	print(f"Average LOSS score: {total_loss/loss_counter:.4f}")
 	print(f"Average BLEU score: {sum(bleu_scores)/len(bleu_scores):.4f}")
 	print(f"Average RougeL score: {sum(rouge_scores)/len(rouge_scores):.4f}")
+	
+	data = {
+		'exp_name': config['exp_name'],
+		'results': {
+			'loss': total_loss/loss_counter,
+			'bleu': sum(bleu_scores)/len(bleu_scores),
+			'rougeL': sum(rouge_scores)/len(rouge_scores)
+		}
+	}
+
+	with open(config['checkpoint_dir']+f"{config['exp_name']}_latest_results.yaml", 'w') as f:
+		yaml.dump(data, f, default_flow_style=False, sort_keys=False)
 
 
 if __name__ == '__main__':
@@ -100,7 +108,7 @@ if __name__ == '__main__':
 
 
 	config['exp_name'] = 'default'
-	config['device'] = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
+	config['device'] = 'cpu'
 
 	dataset = load_from_disk(config['processed_dataset_path'])
 	src_dictionary = Dictionary.load(config['processed_dataset_path']+'code_dictionary.pt')
@@ -121,5 +129,3 @@ if __name__ == '__main__':
 		dataset=dataset
 	)
 	evaluate(config, test_dataloader)
-
-	#7.12409
