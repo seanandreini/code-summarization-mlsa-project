@@ -11,7 +11,7 @@ the epoch of the save, and the loss, in the directory specified in checkpoint_di
 """
 def save_checkpoint(epoch, model, optimizer, val_loss, config, is_best):
 	os.makedirs(config['checkpoint_dir'], exist_ok=True)
-	checkpoint_path = config['checkpoint_dir'] + config['exp_name'] + ("_best_model.pt" if is_best else "_last_model.pt")
+	checkpoint_path = os.path.join(config['checkpoint_dir'], config['exp_name'] + ("_best_model.pt" if is_best else "_last_model.pt"))
 	config_object = {}
 	for key in config:
 		config_object[key] = config[key]

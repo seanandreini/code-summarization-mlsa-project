@@ -1,12 +1,12 @@
 model: 'lstm'
-train_samples: 5000
-valid_samples: 1000
-test_samples: 1000
+train_samples: 100
+valid_samples: 20
+test_samples: 20
 epochs: 100
 embedding_dim: 128
 hidden_dim: 256
 num_layers: 2
-batch_size: 8
+batch_size: 32
 learning_rate: 0.001
 patience: 5
 dropout: 0.2
@@ -14,6 +14,6 @@ teacher_forcing_prob: 0.5
 docstring_vocab_size: 10000
 docstring_vocab_min_frequency: 2
 seed: 42
-checkpoint_dir: './checkpoints/models/'
+checkpoint_dir: './checkpoints/models/lstm'
 raw_dataset_path: "./data/raw/dataset/python/"
 processed_dataset_path: "./data/processed/models/"

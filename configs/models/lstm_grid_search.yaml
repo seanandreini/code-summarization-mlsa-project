@@ -1,0 +1,16 @@
+fixed:
+  model: "lstm"
+  epochs: 50
+  patience: 5
+  train_samples: 100
+  valid_samples: 20
+  test_samples: 20
+  checkpoint_dir: "checkpoints/models/lstm/grid_search_1/"
+
+search_parameters:
+  embedding_dim: [256]
+  hidden_dim: [256, 512]
+  #num_layers: [1, 2]
+  #learning_rate: [0.001, 0.0005]
+  #teacher_forcing_prob: [0.5, 1.0]
+  #dropout: [0.3]

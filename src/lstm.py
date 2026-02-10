@@ -76,10 +76,9 @@ class Decoder(nn.Module):
 		self.basic_rnn = nn.LSTM(self.embedding_dim, self.hidden_dim, num_layers=self.num_layers, dropout=dropout if self.num_layers > 1 else 0, batch_first=True) # NLF
 		self.output_layer = nn.Linear(2*self.hidden_dim, self.vocab_size) # 2* because of context+query
 
-	def init_hidden(self, encoder_states):
-		self.hidden, self.cell = encoder_states
-		last_layer_hidden = self.hidden[-1:]
-		self.attention.init_keys(last_layer_hidden.permute(1,0,2)) # attention wants batch first
+	def init_hidden(self, encoder_outputs, encoder_final_states):
+		self.hidden, self.cell = encoder_final_states
+		self.attention.init_keys(encoder_outputs)
 
 	def forward(self, X, mask=None):
 		# X is N, 1, F
@@ -127,7 +126,7 @@ class EncoderDecoderAttn(nn.Module):
 
 		encoder_outputs, (enc_hidden, enc_cell) = self.encoder(source_seq)
 
-		self.decoder.init_hidden((enc_hidden, enc_cell))
+		self.decoder.init_hidden(encoder_outputs, (enc_hidden, enc_cell))
 		#self.decoder.attention.init_keys(encoder_outputs)
 		self.init_outputs(batch_size, target_len)
 
@@ -153,7 +152,7 @@ def build_lstm_model(config):
 	hidden_dim = config['hidden_dim']
 
 	encoder = Encoder(
-		vocab_size=config['code_vocab_size'],
+		vocab_size=config['src_vocab_size'],
 		embedding_dim=embedding_dim,
 		hidden_dim=hidden_dim,
 		num_layers=config['num_layers'],
@@ -181,3 +180,30 @@ def build_lstm_model(config):
 	optimizer = torch.optim.Adam(model.parameters(), lr=config['learning_rate'])
 
 	return model, optimizer, loss
+
+def predict_ids(model, input_seq, config, max_length=50):
+  if len(input_seq)==0:
+    return None
+  model.eval()
+  device = next(model.parameters()).device
+
+  input_tensor = torch.tensor(input_seq, dtype=torch.long).unsqueeze(0).to(device)  # 1, L
+
+  encoder_outputs, (enc_hidden, enc_cell) = model.encoder(input_tensor)
+  model.decoder.init_hidden(encoder_outputs, (enc_hidden, enc_cell))
+  dec_input = torch.tensor([[model.decoder.bos_id]], dtype=torch.long).to(device)  # 1, 1
+
+  pred_ids = []
+  for _ in range(max_length):
+    logits, _ = model.decoder(dec_input)
+
+    temperature = 0.7
+    probs = torch.softmax(logits / temperature, dim=-1)
+    next_token_id = torch.multinomial(probs.squeeze(0), 1).item()
+
+    if(next_token_id == model.decoder.eos_id):
+      break
+    pred_ids.append(next_token_id)
+    dec_input = torch.tensor([[next_token_id]], dtype=torch.long).to(device)  # 1, 1
+  
+  return pred_ids
