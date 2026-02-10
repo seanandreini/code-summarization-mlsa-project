@@ -4,6 +4,7 @@ import yaml
 import sys
 import os
 import csv
+import pandas as pd
 
 """
 runs configurations found in config passed as argument (required).
@@ -25,8 +26,12 @@ def main():
 	keys, values = zip(*search_parameters.items())
 	combinations = [dict(zip(keys, value)) for value in itertools.product(*values)]
 
+	# path of results file
+	result_file_path = os.path.join(config['fixed']['checkpoint_dir'], 'grid_search_results.csv')
+
 	# goes through every combination
 	for i, combination in enumerate(combinations):
+
 		# if there's both d_model and n_heads check they're correct
 		if combination.get('d_model') and combination.get('n_heads'):
 			if combination['d_model'] % combination['n_heads'] != 0:
@@ -34,6 +39,8 @@ def main():
 
 		# creates name with combination information
 		exp_name = f"run_{i}_" + "_".join([f"{k}{v}" for k, v in combination.items()])
+		if os.path.exists(os.path.join(config['fixed']['checkpoint_dir'], exp_name + "_latest_results.yaml")):
+			continue
 		print(f" Grid Search exp {i+1}/{len(combinations)}: {exp_name}")
 
 		# runs training
@@ -50,8 +57,8 @@ def main():
 		subprocess.run(cmd)
 		
 		# analysis of results and creation of csv
-		result_path = os.path.join(config['fixed']['checkpoint_dir'], exp_name, "latest_results.yaml")
-
+		result_path = os.path.join(config['fixed']['checkpoint_dir'], exp_name + "_latest_results.yaml")
+		print(result_path)
 		if os.path.exists(result_path):
 				with open(result_path, 'r') as f:
 						eval_data = yaml.safe_load(f)
@@ -61,7 +68,7 @@ def main():
 				rouge = eval_data['results']['rougeL']
 		else:
 				print(f"Error finding model score")
-				loss, bleu, rouge = None, None, None
+				continue
 
 		results = {
 			'Experiment': exp_name,
@@ -70,14 +77,23 @@ def main():
 			'RougeL': rouge
 		}
 
-		file_path = os.path.join(config['fixed']['checkpoint_dir'], 'grid_search_results.csv')
-		file_exists = os.path.isfile(file_path)
-		with open(file_path, mode='a', newline='', encoding='utf-8') as f:
+		file_exists = os.path.isfile(result_file_path)
+		with open(result_file_path, mode='a', newline='', encoding='utf-8') as f:
 			writer = csv.DictWriter(f, fieldnames=results.keys())
 
 			if not file_exists: 
 				writer.writeheader()
 			writer.writerow(results)
+	
+	df = pd.read_csv(result_file_path)
+
+	best_row_bleu = df.loc[df['BLEU'].idxmax()]
+	best_row_rouge = df.loc[df['RougeL'].idxmax()]
+	best_row_loss = df.loc[df['Cross Validation Loss'].idxmin()]
+
+	print(f"Best model by BLEU: {best_row_bleu['Experiment']}, BLEU: {best_row_bleu['BLEU']}")
+	print(f"Best model by RougeL: {best_row_rouge['Experiment']}, RougeL: {best_row_bleu['RougeL']}")
+	print(f"Best model by CrossValidationLoss: {best_row_loss['Experiment']}, Loss: {best_row_bleu['Cross Validation Loss']}")
 
 if __name__ == '__main__':
 	main()

@@ -118,8 +118,7 @@ def main():
 	valid_args = [
 		'model', 
 		'train_samples', 
-		'valid_samples', 
-		'test_samples',
+		'valid_samples',
 		'epochs', 
 		'batch_size', 
 		'learning_rate', 

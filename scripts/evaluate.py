@@ -3,10 +3,9 @@ from rouge_score import rouge_scorer
 from gensim.corpora import Dictionary
 from transformers import PreTrainedTokenizerFast
 import torch
+import os
 
 from src.utils import load_checkpoint, decode_ids_to_docstring
-from src.lstm import build_lstm_model
-from src.transformer import build_transformer_model
 
 def evaluate(config, dataloader):
 	model, _, _, _, loss = load_checkpoint(config, False, False)
@@ -62,9 +61,6 @@ def evaluate(config, dataloader):
 			pred_tokens  = decode_ids_to_docstring(pred_ids, tgt_tokenizer)
 			labels_tokens = decode_ids_to_docstring(labels[i].tolist(), tgt_tokenizer)
 
-			#print("Predicted Docstring: ", ' '.join(pred_tokens))
-			#print("Actual Docstring:    ", ' '.join(labels_tokens))
-
 			bleu_score = sentence_bleu(
 					[labels_tokens],
 					pred_tokens,
@@ -88,7 +84,7 @@ def evaluate(config, dataloader):
 		}
 	}
 
-	with open(config['checkpoint_dir']+f"{config['exp_name']}_latest_results.yaml", 'w') as f:
+	with open(os.path.join(config['checkpoint_dir']+f"{config['exp_name']}_latest_results.yaml"), 'w') as f:
 		yaml.dump(data, f, default_flow_style=False, sort_keys=False)
 
 
