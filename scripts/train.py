@@ -31,8 +31,6 @@ def train_one_epoch(config, model, optimizer, loss, train_dataloader, src_pad_to
 			source_mask = None
 
 		optimizer.zero_grad()
-
-
 		y_pred = model(input, target_seq=dec_input, source_mask=source_mask)
 		y_pred = y_pred.permute(0, 2, 1)  # N, V, L
 		single_loss = loss(y_pred, targets)
@@ -86,6 +84,7 @@ def main():
 	parser.add_argument('--exp_name', type=str, default='default')
 
 	# common args
+	parser.add_argument('--train_samples', type=int)
 	parser.add_argument('--valid_samples', type=int)
 	parser.add_argument('--test_samples', type=int)
 	parser.add_argument('--epochs', type=int,)
@@ -120,13 +119,13 @@ def main():
 		'model', 
 		'train_samples', 
 		'valid_samples', 
-		'test_samples' 
+		'test_samples',
 		'epochs', 
 		'batch_size', 
-		'lr', 
+		'learning_rate', 
 		'num_layers', 
 		'patience', 
-		'dropout', 
+		'dropout',
 		'seed', 
 		'exp_name', 
 		'checkpoint_dir']
@@ -183,19 +182,11 @@ def main():
 		dataset=dataset
 	)
 
-	# gets model for training
-	if config['model'] == 'lstm':
-		model, optimizer, loss = build_lstm_model(config)
-	else:
-		model, optimizer, loss = build_transformer_model(config)
-
+	model, optimizer, start_epoch, best_loss, loss = load_checkpoint(config, True)
 	epochs = config['epochs']
-
 	model.to(config['device'])
 	
 	since_best = 0
-
-	model, optimizer, start_epoch, best_loss, _ = load_checkpoint(model, optimizer, config, True)
 	if start_epoch is None:
 		best_loss = float('inf')
 		start_epoch=0

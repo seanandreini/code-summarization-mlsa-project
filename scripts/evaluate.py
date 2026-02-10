@@ -9,6 +9,8 @@ from src.lstm import build_lstm_model
 from src.transformer import build_transformer_model
 
 def evaluate(config, dataloader):
+	model, _, _, _, loss = load_checkpoint(config, False, False)
+
 	if config['model'] == 'lstm':
 		from src.lstm import predict_ids
 	else:
@@ -27,7 +29,6 @@ def evaluate(config, dataloader):
 																			unk_token="[UNK]")
 
 
-	model, optimizer, _, _, loss = load_checkpoint(None, None, config, False, False)
 	model.eval()
 	model.to(config['device'])
 
@@ -94,21 +95,30 @@ def evaluate(config, dataloader):
 if __name__ == '__main__':
 	import yaml, argparse
 	from datasets import load_from_disk
-	from src.data_manager import get_dataloaders
+	from src.data_manager import get_test_dataloader
 	parser = argparse.ArgumentParser()
+	
 	parser.add_argument(
-		'--config',
+		'--exp_name',
 		type=str,
 		required=True,
-		help='path to config file'
+		help='name of experiment'
+	)
+	parser.add_argument(
+		'--dir',
+		type=str,
+		required=True,
+		help='path of experiment'
 	)
 	args = parser.parse_args()
-	with open(args.config) as f:
-		config = yaml.safe_load(f)
-
-
-	config['exp_name'] = 'default'
+	
+	config = {}
+	config['exp_name'] = args.exp_name
+	config['checkpoint_dir'] = args.dir
 	config['device'] = 'cpu'
+
+	load_checkpoint(config, False, False)
+	
 
 	dataset = load_from_disk(config['processed_dataset_path'])
 	src_dictionary = Dictionary.load(config['processed_dataset_path']+'code_dictionary.pt')
@@ -122,10 +132,11 @@ if __name__ == '__main__':
 	src_dictionary.id2token = {
 			v: k for k, v in src_dictionary.token2id.items()
 	}
-	train_dataloader, valid_dataloader, test_dataloader = get_dataloaders(
+	
+	evaluate(config, get_test_dataloader(
 		config=config,
 		src_dictionary=src_dictionary,
 		tgt_tokenizer=tgt_tokenizer,
 		dataset=dataset
-	)
-	evaluate(config, test_dataloader)
+	))
+	

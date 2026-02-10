@@ -31,8 +31,7 @@ class CollateFn:
 
 		return input_ids, labels
 
-def get_dataloaders(config, src_dictionary, tgt_tokenizer, dataset):
-
+def get_train_dataloader(config, src_dictionary, tgt_tokenizer, dataset):
 	collate = CollateFn(
 		model=config['model'],
 		src_pad_id=src_dictionary.token2id['[PAD]'],
@@ -40,40 +39,65 @@ def get_dataloaders(config, src_dictionary, tgt_tokenizer, dataset):
 		tgt_eos_id=tgt_tokenizer.eos_token_id,
 		tgt_bos_id=tgt_tokenizer.bos_token_id
 	)
-
 	generator = torch.Generator()
 	generator.manual_seed(config['seed'])
-
+	
 	train_dataset = dataset['train'].select(range(config['train_samples']))
-	valid_dataset = dataset['valid'].select(range(config['valid_samples']))
-	test_dataset = dataset['test'].select(range(config['test_samples']))
-
-	batch_size = config['batch_size']
-
-	train_dataloader = DataLoader(
+	
+	return DataLoader(
 		train_dataset,
-		batch_size=batch_size,
+		batch_size=config['batch_size'],
 		shuffle=True,
 		pin_memory=True,
 		collate_fn=collate,
 		generator=generator
 	)
 
-	valid_dataloader = DataLoader(
+def get_valid_dataloader(config, src_dictionary, tgt_tokenizer, dataset):
+	collate = CollateFn(
+		model=config['model'],
+		src_pad_id=src_dictionary.token2id['[PAD]'],
+		tgt_pad_id=tgt_tokenizer.pad_token_id,
+		tgt_eos_id=tgt_tokenizer.eos_token_id,
+		tgt_bos_id=tgt_tokenizer.bos_token_id
+	)
+	generator = torch.Generator()
+	generator.manual_seed(config['seed'])
+	
+	valid_dataset = dataset['valid'].select(range(config['valid_samples']))
+	
+	return DataLoader(
 		valid_dataset,
-		batch_size=batch_size,
+		batch_size=config['batch_size'],
 		shuffle=True,
 		pin_memory=True,
 		collate_fn=collate,
 		generator=generator
 	)
 
-	test_dataloader = DataLoader(
+def get_test_dataloader(config, src_dictionary, tgt_tokenizer, dataset):
+	collate = CollateFn(
+		model=config['model'],
+		src_pad_id=src_dictionary.token2id['[PAD]'],
+		tgt_pad_id=tgt_tokenizer.pad_token_id,
+		tgt_eos_id=tgt_tokenizer.eos_token_id,
+		tgt_bos_id=tgt_tokenizer.bos_token_id
+	)
+	generator = torch.Generator()
+	generator.manual_seed(config['seed'])
+	
+	test_dataset = dataset['test'].select(range(config['test_samples']))
+	
+	return DataLoader(
 		test_dataset,
 		batch_size=1,
 		shuffle=False,
 		pin_memory=True,
 		collate_fn=collate
 	)
-
-	return train_dataloader, valid_dataloader, test_dataloader
+	
+def get_dataloaders(config, src_dictionary, tgt_tokenizer, dataset):
+	return \
+		get_train_dataloader(config, src_dictionary, tgt_tokenizer, dataset), \
+		get_valid_dataloader(config, src_dictionary, tgt_tokenizer, dataset), \
+		get_test_dataloader(config, src_dictionary, tgt_tokenizer, dataset)
