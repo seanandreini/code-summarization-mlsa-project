@@ -47,9 +47,44 @@ pip install -r requirements.txt
 ```
 
 >[!IMPORTANT]
-> If you want to use the GPU on a system with an Nvidia GPU you have to manually install pytorch with cuda
-> To do so after installing the requirements run this command:
-> ```pip uninstall torch torchvision torchaudio -y```
-> After that, run ```nvidia-smi``` and check which cuda version is installed in your system.
-> You then need to run:
-> ```pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cuXXX``` where XXX is your cuda version. For example, if you have cuda13.0 your command should be ```pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu130```
+> If you want to use the GPU on a system with an Nvidia GPU you have to manually install pytorch with cuda.\
+> To do so after installing the requirements run this command:\
+> ```pip uninstall torch torchvision torchaudio -y```\
+> After that, run ```nvidia-smi``` and check which cuda version is installed in your system.\
+> You then need to run:\
+> ```pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cuXXX``` where XXX is your cuda version.\
+> For example, if you have cuda13.0 your command should be ```pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu130```
+
+## How To Run
+
+Keep in mind that to run every command listed below you must be in the root directory of the project.
+
+### Training
+To train a model you just need to run the training script ```python -m scripts.train``` specifying the model (you can choose between transformer and lstm).
+You can then specify some optional parameters if you want to change them, or you can even change the config path.
+
+The possible parameters are:
+- ```--model```: **required**, choose between transformer and lstm.
+- ```--exp_name```: name of experiment, ```default``` as default name.
+- ```--train_samples```: specify subset of samples to use for training.
+- ```--valid_samples```: specify subset of samples to use for validation.
+- ```--epochs```: max of epoch the model can train for.
+- ```--batch_size```
+- ```--learning_rate```
+- ```--num_layers```
+- ```--patience```: number of consecutive epochs after which the training stops if the validation loss doesn't increase.
+- ```--dropout```
+- ```--config```: path of config file. The parameters in the config file get overwritten by any parameter passed as argument to the script.
+- ```--seed```: seed passed to ensure reproducibility.
+- ```--checkpoint_dir```: directory where the script will save the models checkpoints (last model and best model).
+- Parameters valid only for LSTM:
+  - ```--embedding_dim```
+  - ```--hidden_dim```
+  - ```--teacher_forcing_prob```
+- Parameters valid only for Transformer:
+  - ```--n_heads```
+  - ```--d_model```
+  - ```--ff_units```
+
+### Evaluation
+You can evaluate a model by yourself by running the command ```python -m scripts.evaluate --dir path_of_model --exp_name name_of_model```. Both arguments are required
