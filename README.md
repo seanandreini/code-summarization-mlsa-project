@@ -48,19 +48,31 @@ pip install -r requirements.txt
 
 >[!IMPORTANT]
 > If you want to use the GPU on a system with an Nvidia GPU you have to manually install pytorch with cuda.\
-> To do so after installing the requirements run this command:\
-> ```pip uninstall torch torchvision torchaudio -y```\
+> To do so after installing the requirements run this command:
+> ```
+> pip uninstall torch torchvision torchaudio -y
+> ```
 > After that, run ```nvidia-smi``` and check which cuda version is installed in your system.\
-> You then need to run:\
-> ```pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cuXXX``` where XXX is your cuda version.\
-> For example, if you have cuda13.0 your command should be ```pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu130```
+> You then need to run:
+> ```
+> pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cuXXX
+> ```
+> where XXX is your cuda version.\
+> For example, if you have cuda13.0 your command should be
+> ```
+> pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu130
+> ```
 
 ## How To Run
 
 Keep in mind that to run every command listed below you must be in the root directory of the project.
 
 ### Training
-To train a model you just need to run the training script ```python -m scripts.train``` specifying the model (you can choose between transformer and lstm).
+To train a model you just need to run the training script: 
+```
+python -m scripts.train --model MODEL_ARCHITECTURE
+```
+```--model``` is required, you can choose between ```transformer``` and ```lstm```.
 You can then specify some optional parameters if you want to change them, or you can even change the config path.
 
 The possible parameters are:
@@ -74,7 +86,7 @@ The possible parameters are:
 - ```--num_layers```
 - ```--patience```: number of consecutive epochs after which the training stops if the validation loss doesn't increase.
 - ```--dropout```
-- ```--config```: path of config file. The parameters in the config file get overwritten by any parameter passed as argument to the script.
+- ```--config```: path of config file. The parameters in the config file get overwritten by any parameter passed as argument to the script. The default one is located in ```configs/models/ARCHITECTURE```, where ```ARCHITECTURE``` is either ```transformer``` or ```lstm```
 - ```--seed```: seed passed to ensure reproducibility.
 - ```--checkpoint_dir```: directory where the script will save the models checkpoints (last model and best model).
 - Parameters valid only for LSTM:
@@ -87,4 +99,39 @@ The possible parameters are:
   - ```--ff_units```
 
 ### Evaluation
-You can evaluate a model by yourself by running the command ```python -m scripts.evaluate --dir path_of_model --exp_name name_of_model```. Both arguments are required
+
+You can evaluate a model by yourself by running the command 
+```
+python -m scripts.evaluate --dir PATH_OF_MODEL --exp_name NAME_OF_EXPERIMENT
+```
+Both arguments are required
+So for example, if you want to run the default experiment found in ```checkpoints/models/transformer``` you'll need to run ```python -m scripts.evaluate --dir checkpoints/models/transformer --exp_name default```
+> [!IMPORTANT]
+> For ```--exp_name``` insert the name of the experiment, not the name of the model file itself (in this case ```default``` and not ```default_best_model.pt```)
+
+The evaluation will create a ```EXP_NAME_latest_results.yaml``` which will log the Cross Validation Loss, BLEU and RougeL scores, in addition to printing them on console.
+
+### Grid Search
+
+If you want to test different models configurations, you can do so by running a grid search. To do so you first need to specify a grid search config file. The default one is located in ```configs/models```. \
+This argument is required, because if you want to use the default one you have to choose between ```configs/models/lstm_grid_search.yaml``` or ```configs/models/transformer_grid_search.yaml```.
+You can see that in these configs there are some fixed parameters you can set yourself, and the search parameters, which are going to create the different configurations. Every other parameter which is not specified in this file will be taken by the default config files found in the same folder.
+
+An example to run a grid search on a transformer using the default config file would be:
+```
+python -m run_grid_search --grid_config configs/models/transformer_grid_search.yaml
+```
+
+The script will run the training script, the evaluation script (the result will be saved as explained above in **Evaluation**), and they will be saved in a ```.csv``` file saved in the same directory of the models, which is specified in the config file. The script will also print the best model for every measure.
+
+### Summarization
+
+To create a summary from an input you just need to run the following command:
+```
+python -m scripts.summarize --dir PATH_OF_MODEL --exp_name NAME_OF_EXPERIMENT --input CODE
+```
+
+For example, if you wanted to get a summary using the default transformer model you would need to run:
+```
+python -m scripts.summarize --dir checkpoints/models/transformer --exp_name default --input "def(a, b): return a+b"
+```
