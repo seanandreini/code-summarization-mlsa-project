@@ -19,7 +19,7 @@ def main():
   config['device'] = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
 
   model, _, _, _, _ =load_checkpoint(config, False, False)
-  
+
   if(config['model'] == 'lstm'):
     from src.lstm import predict_ids
   else:
@@ -28,11 +28,16 @@ def main():
   src_dictionary = Dictionary.load(os.path.join(config['processed_dataset_path']+'code_dictionary.pt'))
   pred_ids = predict_ids(model, encode_code_to_ids(args.input, src_dictionary), config)
 
+  if pred_ids is None:
+    print("Code Syntax Error")
+    return
+
   tgt_tokenizer = PreTrainedTokenizerFast(tokenizer_file=os.path.join(config['processed_dataset_path']+'bpe_tokenizer.json'),
 																			pad_token="[PAD]",
 																			bos_token="[BOS]",
 																			eos_token="[EOS]",
 																			unk_token="[UNK]")
+  
   decoded_string = decode_ids_to_docstring(pred_ids, tgt_tokenizer)
   print(f"Predicted code summary: {decoded_string}")
 
