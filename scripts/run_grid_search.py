@@ -92,8 +92,8 @@ def main():
 	best_row_loss = df.loc[df['Cross Validation Loss'].idxmin()]
 
 	print(f"Best model by BLEU: {best_row_bleu['Experiment']}, BLEU: {best_row_bleu['BLEU']}")
-	print(f"Best model by RougeL: {best_row_rouge['Experiment']}, RougeL: {best_row_bleu['RougeL']}")
-	print(f"Best model by CrossValidationLoss: {best_row_loss['Experiment']}, Loss: {best_row_bleu['Cross Validation Loss']}")
+	print(f"Best model by RougeL: {best_row_rouge['Experiment']}, RougeL: {best_row_rouge['RougeL']}")
+	print(f"Best model by CrossValidationLoss: {best_row_loss['Experiment']}, Loss: {best_row_loss['Cross Validation Loss']}")
 
 if __name__ == '__main__':
 	main()
