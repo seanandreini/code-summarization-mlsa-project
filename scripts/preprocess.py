@@ -139,7 +139,7 @@ if __name__ == '__main__':
 	parser.add_argument(
 		'--config',
 		type=str,
-		required=True,
+		default='configs/models/transformer/transformer.yaml',
 		help='path to config file'
 	)
 	args = parser.parse_args()
