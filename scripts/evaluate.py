@@ -8,7 +8,7 @@ import os
 from src.utils import load_checkpoint, decode_ids_to_docstring
 
 def evaluate(config, dataloader):
-	model, _, _, _, loss = load_checkpoint(config, False, False)
+	model, _, _, _, loss = load_checkpoint(config, False, False, True)
 
 	if config['model'] == 'lstm':
 		from src.lstm import predict_ids
@@ -113,8 +113,7 @@ if __name__ == '__main__':
 	config['checkpoint_dir'] = args.dir
 	config['device'] = 'cpu'
 
-	load_checkpoint(config, False, False)
-	
+	load_checkpoint(config, False, False, True)
 
 	dataset = load_from_disk(config['processed_dataset_path'])
 	src_dictionary = Dictionary.load(config['processed_dataset_path']+'code_dictionary.pt')

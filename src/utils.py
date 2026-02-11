@@ -28,7 +28,7 @@ def save_checkpoint(epoch, model, optimizer, val_loss, config, is_best):
 loads a checkpoint. it gets the model and the optimizer, and returns the epoch and validation loss
 load_last makes it load the last checkpoint, if false it load the best
 """
-def load_checkpoint(config, load_last, strict_config=True):
+def load_checkpoint(config, load_last, strict_config=True, load_on_cpu=False):
 	checkpoint_path = os.path.join(config['checkpoint_dir'], config['exp_name'] + ("_last_model.pt" if load_last else "_best_model.pt"))
 	path_exists = os.path.exists(checkpoint_path)
 
@@ -42,6 +42,7 @@ def load_checkpoint(config, load_last, strict_config=True):
 		else:  
 			config.update(checkpoint['config'])
 	
+	if load_on_cpu: config['device'] = 'cpu'
 	if config['model'] == 'lstm':
 		from src.lstm import build_lstm_model
 		model, optimizer, loss = build_lstm_model(config)
