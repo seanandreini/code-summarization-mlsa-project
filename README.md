@@ -67,6 +67,16 @@ pip install -r requirements.txt
 
 Keep in mind that to run every command listed below you must be in the root directory of the project.
 
+### Dataset preprocessing
+
+If you want to train a model you can skip this step, as the training script calls the preprocess script if it finds out there's no processed data.
+If you want to run evaluation or summarization without having ran training yet, you need to process the dataset.
+To do so you just need to run the following command:
+```
+python -m scripts.preprocess
+```
+You can also specify another config if you want with ```--config```. Keep in mind that it is not reccomended nto to use the default config, as that builds the dataset in a path which is then accessed by everything else, so if you change it you have to change the dataset path for every config file.
+
 ### Training
 To train a model you just need to run the training script: 
 ```
