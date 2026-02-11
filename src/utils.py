@@ -43,6 +43,8 @@ def load_checkpoint(config, load_last, strict_config=True, load_on_cpu=False):
 			config.update(checkpoint['config'])
 	
 	if load_on_cpu: config['device'] = 'cpu'
+	else: config['device'] = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
+	
 	if config['model'] == 'lstm':
 		from src.lstm import build_lstm_model
 		model, optimizer, loss = build_lstm_model(config)

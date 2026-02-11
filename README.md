@@ -24,9 +24,16 @@ To download everything necessary you can either clone the repository or download
 
 ### Setting up the environment
 
-This project was developed using Python 3.11.4. To create a Python environment you first need to have the correct Python version installed (it is recommended to use [pyenv](https://github.com/pyenv/pyenv)), you can then run the following command to create the environment:
+This project was developed using Python 3.11.4. To create a Python environment you first need to have the correct Python version installed (it is recommended to use [pyenv](https://github.com/pyenv/pyenv)), you can then run the following commands to create the environment:
+```
+pyenv install 3.11.4
+```
+
+```
+pyenv local 3.11.4
+```
 ```bash
-python -m venv .venv
+pyenv exec python -m venv .venv
 ```
 
 You then need to activate the environment.
@@ -67,6 +74,16 @@ pip install -r requirements.txt
 
 Keep in mind that to run every command listed below you must be in the root directory of the project.
 
+### Dataset preprocessing
+
+If you want to train a model you can skip this step, as the training script calls the preprocess script if it finds out there's no processed data.
+If you want to run evaluation or summarization without having ran training yet, you need to process the dataset.
+To do so you just need to run the following command:
+```
+python -m scripts.preprocess
+```
+You can also specify another config if you want with ```--config```. Keep in mind that it is not reccomended nto to use the default config, as that builds the dataset in a path which is then accessed by everything else, so if you change it you have to change the dataset path for every config file.
+
 ### Training
 To train a model you just need to run the training script: 
 ```
@@ -105,9 +122,12 @@ You can evaluate a model by yourself by running the command
 python -m scripts.evaluate --dir PATH_OF_MODEL --exp_name NAME_OF_EXPERIMENT
 ```
 Both arguments are required
-So for example, if you want to run the default experiment found in ```checkpoints/models/transformer``` you'll need to run ```python -m scripts.evaluate --dir checkpoints/models/transformer --exp_name default```
+So for example, if you want to run the experiment best_bleu_20k in ```checkpoints/models/transformer``` that you can download the [latest release](https://github.com/seanandreini/code-summarization-mlsa-project/releases/latest) you'll need to run 
+```
+python -m scripts.evaluate --dir checkpoints/models/transformer --exp_name best_bleu_20k
+```
 > [!IMPORTANT]
-> For ```--exp_name``` insert the name of the experiment, not the name of the model file itself (in this case ```default``` and not ```default_best_model.pt```)
+> For ```--exp_name``` insert the name of the experiment, not the name of the model file itself (in this case ```best_bleu_20k``` and not ```best_bleu_20k_best_model.pt```)
 
 The evaluation will create a ```EXP_NAME_latest_results.yaml``` which will log the Cross Validation Loss, BLEU and RougeL scores, in addition to printing them on console.
 
@@ -133,5 +153,7 @@ python -m scripts.summarize --dir PATH_OF_MODEL --exp_name NAME_OF_EXPERIMENT --
 
 For example, if you wanted to get a summary using the default transformer model you would need to run:
 ```
-python -m scripts.summarize --dir checkpoints/models/transformer --exp_name default --input "def(a, b): return a+b"
+python -m scripts.summarize --dir checkpoints/models/transformer --exp_name default --input "def load_config(path):
+     with open(path, 'r') as f:
+         return json.load(f)"
 ```
