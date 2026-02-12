@@ -24,7 +24,7 @@ To download everything necessary you can either clone the repository or download
 
 ### Setting up the environment
 
-This project was developed using Python 3.11.4. To create a Python environment you first need to have the correct Python version installed (it is recommended to use [pyenv](https://github.com/pyenv/pyenv)), you can then run the following commands to create the environment:
+This project was developed using Python 3.11.4. To create a Python environment you first need to have the correct Python version installed (it is recommended to use pyenv: [pyenv](https://github.com/pyenv/pyenv) or [pyenv for windows](https://github.com/pyenv-win/pyenv-win)), you can then run the following commands to create the environment:
 ```
 pyenv install 3.11.4
 ```
