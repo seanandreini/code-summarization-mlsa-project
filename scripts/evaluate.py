@@ -84,7 +84,7 @@ def evaluate(config, dataloader):
 		}
 	}
 
-	with open(os.path.join(config['checkpoint_dir']+f"{config['exp_name']}_latest_results.yaml"), 'w') as f:
+	with open(os.path.join(config['checkpoint_dir'], f"{config['exp_name']}_latest_results.yaml"), 'w') as f:
 		yaml.dump(data, f, default_flow_style=False, sort_keys=False)
 
 
