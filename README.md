@@ -121,9 +121,9 @@ You can evaluate a model by yourself by running the command
 python -m scripts.evaluate --dir PATH_OF_MODEL --exp_name NAME_OF_EXPERIMENT
 ```
 Both arguments are required
-So for example, if you want to run the experiment best_bleu_20k in ```checkpoints/models/transformer``` that you can download the [latest release](https://github.com/seanandreini/code-summarization-mlsa-project/releases/latest) you'll need to run 
+So for example, if you want to run the experiment best_bleu_50k in ```checkpoints/models/transformer``` that you can download the [latest release](https://github.com/seanandreini/code-summarization-mlsa-project/releases/latest) you'll need to run 
 ```
-python -m scripts.evaluate --dir checkpoints/models/transformer --exp_name best_bleu_20k
+python -m scripts.evaluate --dir checkpoints/models/transformer --exp_name best_bleu_50k
 ```
 > [!IMPORTANT]
 > For ```--exp_name``` insert the name of the experiment, not the name of the model file itself (in this case ```best_bleu_20k``` and not ```best_bleu_20k_best_model.pt```)
@@ -150,9 +150,9 @@ To create a summary from an input you just need to run the following command:
 python -m scripts.summarize --dir PATH_OF_MODEL --exp_name NAME_OF_EXPERIMENT --input CODE
 ```
 
-For example, if you wanted to get a summary using the default transformer model you would need to run:
+For example, if you wanted to get a summary using the experiment transformer named best_bleu_50k downloaded from the [latest release](https://github.com/seanandreini/code-summarization-mlsa-project/releases/latest) you would need to run:
 ```
-python -m scripts.summarize --dir checkpoints/models/transformer --exp_name default --input "def load_config(path):
+python -m scripts.summarize --dir checkpoints/models/transformer --exp_name best_bleu_50k --input "def load_config(path):
      with open(path, 'r') as f:
          return json.load(f)"
 ```
