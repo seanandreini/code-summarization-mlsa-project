@@ -4,7 +4,7 @@ This is my implementation of a code summarization model for the Machine Learning
 
 ## Structure
 The whole project contains not only the final models, but all the research done with notebooks. The structure is organized as following:
-- ```checkpoints/```: this folder, which is ignored but github, is generated when training a model in notebooks. It's organized into folders based on the type of the model and other characteristics such as tokenization.
+- ```checkpoints/```: this folder, which is ignored by github, is generated when training a model in notebooks. It's organized into folders based on the type of the model and other characteristics such as tokenization.
 - ```configs/```: contains ```yaml``` config files to specify some parameters of the models.
 - ```data/```: contains the data used by the project.
   - ```raw/```: contains the raw unedited dataset downloaded from CodeXGLUE.
