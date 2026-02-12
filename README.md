@@ -82,7 +82,6 @@ To do so you just need to run the following command:
 ```
 python -m scripts.preprocess
 ```
-You can also specify another config if you want with ```--config```. Keep in mind that it is not reccomended nto to use the default config, as that builds the dataset in a path which is then accessed by everything else, so if you change it you have to change the dataset path for every config file.
 
 ### Training
 To train a model you just need to run the training script: 
@@ -142,7 +141,7 @@ An example to run a grid search on a transformer using the default config file w
 python -m run_grid_search --grid_config configs/models/transformer_grid_search.yaml
 ```
 
-The script will run the training script, the evaluation script (the result will be saved as explained above in **Evaluation**), and they will be saved in a ```.csv``` file saved in the same directory of the models, which is specified in the config file. The script will also print the best model for every measure.
+The script will run the training script, the evaluation script (the result will be saved as explained above in **Evaluation**), and they will be saved in a ```.csv``` file saved in the same directory of the models, which is specified in the config file. The script will also print the best model for every metric.
 
 ### Summarization
 
