@@ -8,20 +8,24 @@ import torch
 
 from scripts.preprocess import prepare_data
 from src.data_manager import get_dataloaders
-from src.lstm import build_lstm_model
 from src.utils import load_checkpoint, save_checkpoint, set_seed
-from src.transformer import build_transformer_model
 
 DEFAULT_CONFIG_PATH = 'configs/models/'
 
+"""
+logic to train one epoch (trains and uses back propagation on loss)
+"""
 def train_one_epoch(config, model, optimizer, loss, train_dataloader, src_pad_token_id):
 	model.train()
 	total_loss = 0.0
 	loss_counter = 0
+	
+  # for every batch
 	for input, labels in train_dataloader:
 		input = input.to(config['device'])
 		labels = labels.to(config['device'])
 
+    # padding mask for transformer self attention
 		if config['model'] == 'transformer':
 			dec_input = labels[:, :-1]
 			targets = labels[:, 1:]
@@ -30,21 +34,27 @@ def train_one_epoch(config, model, optimizer, loss, train_dataloader, src_pad_to
 			dec_input = targets = labels
 			source_mask = None
 
-		optimizer.zero_grad()
+		optimizer.zero_grad() # resets the optimizer gradients
 		y_pred = model(input, target_seq=dec_input, source_mask=source_mask)
-		y_pred = y_pred.permute(0, 2, 1)  # N, V, L
+		y_pred = y_pred.permute(0, 2, 1)  # Cross Validation Loss needs N, V, L
 		single_loss = loss(y_pred, targets)
 		single_loss.backward()
 		optimizer.step()
+		
+    # logs loss
 		total_loss += single_loss.item()
 		loss_counter += 1
 	
+  # cleans variables so as not to run out of VRAM
 	del single_loss
 	del y_pred
 	del input
 	del labels
 	return total_loss/loss_counter
 
+"""
+used to calculate validation loss during training, so as to know when to make an early stop
+"""
 def validate(config, model, loss, valid_dataloader, src_pad_token_id):
 	model.eval()
 	with torch.no_grad():
@@ -181,19 +191,21 @@ def main():
 		dataset=dataset
 	)
 
+  # gets model from checkpoint (if there's no checkpoint it instantiates a model with the config)
 	model, optimizer, start_epoch, best_loss, loss = load_checkpoint(config, True)
 	epochs = config['epochs']
 	model.to(config['device'])
 	
+  # initializes the variables
 	since_best = 0
 	if start_epoch is None:
 		best_loss = float('inf')
 		start_epoch=0
 		
-
+  # starts training and validation loop
 	print(f"Starting training from epoch {start_epoch+1}")
-
 	for epoch in range(start_epoch+1, epochs):
+		# trains
 		train_loss = train_one_epoch(
 			config=config,
 			model=model,
@@ -203,6 +215,7 @@ def main():
 			src_pad_token_id=src_dictionary.token2id['[PAD]']
 		)
 
+    # calculates validation loss
 		valid_loss = validate(
 			config=config,
 			model=model,
@@ -211,22 +224,28 @@ def main():
 			src_pad_token_id=src_dictionary.token2id['[PAD]']
 		)
 		
+    # prints losses every 5 epoch (or the first one)
 		if(epoch == 1 or epoch % 5 == 0):
 			print(f"Epoch {epoch}, Training Loss: {train_loss:10.8f}\nValid Loss: {valid_loss:10.8f}")
 
+    # saves a checkpoint as exp_name_last_model (is_best=False)
 		save_checkpoint(epoch, model, optimizer, best_loss, config, False)
+		
+    # if validation loss went down saves checkpoint as exp_name_best_model (is_best=True)
 		if(valid_loss < best_loss):
 			best_loss = valid_loss
 			since_best = 0
 			save_checkpoint(epoch, model, optimizer, best_loss, config, True)
 			print(f"Saved new best model (epoch {epoch}) with valid loss: {best_loss:10.8f}")
 			
+    # if the model didn't improve increases patience counter
 		else:
 			since_best += 1
 			if since_best >= config['patience']:
 				print("Early stopping")
 				break
 		
+    # if on gpu clears cache
 		if config['device'] == 'cuda': torch.cuda.empty_cache() # clears GPU memory
 		elif config['device'] == 'mps': torch.mps.empty_cache()
 

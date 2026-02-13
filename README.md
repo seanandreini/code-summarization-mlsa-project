@@ -4,7 +4,7 @@ This is my implementation of a code summarization model for the Machine Learning
 
 ## Structure
 The whole project contains not only the final models, but all the research done with notebooks. The structure is organized as following:
-- ```checkpoints/```: this folder, which is ignored but github, is generated when training a model in notebooks. It's organized into folders based on the type of the model and other characteristics such as tokenization.
+- ```checkpoints/```: this folder, which is ignored by github, is generated when training a model in notebooks. It's organized into folders based on the type of the model and other characteristics such as tokenization.
 - ```configs/```: contains ```yaml``` config files to specify some parameters of the models.
 - ```data/```: contains the data used by the project.
   - ```raw/```: contains the raw unedited dataset downloaded from CodeXGLUE.
@@ -24,7 +24,7 @@ To download everything necessary you can either clone the repository or download
 
 ### Setting up the environment
 
-This project was developed using Python 3.11.4. To create a Python environment you first need to have the correct Python version installed (it is recommended to use [pyenv](https://github.com/pyenv/pyenv)), you can then run the following commands to create the environment:
+This project was developed using Python 3.11.4. To create a Python environment you first need to have the correct Python version installed (it is recommended to use pyenv: [pyenv](https://github.com/pyenv/pyenv) or [pyenv for windows](https://github.com/pyenv-win/pyenv-win)), you can then run the following commands to create the environment:
 ```
 pyenv install 3.11.4
 ```
@@ -121,9 +121,9 @@ You can evaluate a model by yourself by running the command
 python -m scripts.evaluate --dir PATH_OF_MODEL --exp_name NAME_OF_EXPERIMENT
 ```
 Both arguments are required
-So for example, if you want to run the experiment best_bleu_20k in ```checkpoints/models/transformer``` that you can download the [latest release](https://github.com/seanandreini/code-summarization-mlsa-project/releases/latest) you'll need to run 
+So for example, if you want to run the experiment best_bleu_50k in ```checkpoints/models/transformer``` that you can download the [latest release](https://github.com/seanandreini/code-summarization-mlsa-project/releases/latest) you'll need to run 
 ```
-python -m scripts.evaluate --dir checkpoints/models/transformer --exp_name best_bleu_20k
+python -m scripts.evaluate --dir checkpoints/models/transformer --exp_name best_bleu_50k
 ```
 > [!IMPORTANT]
 > For ```--exp_name``` insert the name of the experiment, not the name of the model file itself (in this case ```best_bleu_20k``` and not ```best_bleu_20k_best_model.pt```)
@@ -150,9 +150,9 @@ To create a summary from an input you just need to run the following command:
 python -m scripts.summarize --dir PATH_OF_MODEL --exp_name NAME_OF_EXPERIMENT --input CODE
 ```
 
-For example, if you wanted to get a summary using the default transformer model you would need to run:
+For example, if you wanted to get a summary using the experiment transformer named best_bleu_50k downloaded from the [latest release](https://github.com/seanandreini/code-summarization-mlsa-project/releases/latest) you would need to run:
 ```
-python -m scripts.summarize --dir checkpoints/models/transformer --exp_name default --input "def load_config(path):
+python -m scripts.summarize --dir checkpoints/models/transformer --exp_name best_bleu_50k --input "def load_config(path):
      with open(path, 'r') as f:
          return json.load(f)"
 ```

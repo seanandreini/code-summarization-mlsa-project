@@ -7,7 +7,9 @@ import numpy as np
 """
 function to save a checkpoint of a model during training.
 it saves the model state dict, the optimizer state dict, 
-the epoch of the save, and the loss, in the directory specified in checkpoint_dir
+the epoch of the save, and the loss, in the directory specified in the config.
+it also saves the config itself, so it can be loaded in the future.
+if is_best is True it saves the model as exp_name_best_model.pt, otherwise as exp_name_last_model.pt
 """
 def save_checkpoint(epoch, model, optimizer, val_loss, config, is_best):
 	os.makedirs(config['checkpoint_dir'], exist_ok=True)
@@ -25,8 +27,11 @@ def save_checkpoint(epoch, model, optimizer, val_loss, config, is_best):
 	
 
 """
-loads a checkpoint. it gets the model and the optimizer, and returns the epoch and validation loss
-load_last makes it load the last checkpoint, if false it load the best
+loads a checkpoint. returns model, optimizer, start epoch, validation loss and loss function
+if load_on_cpu is True it loads it on cpu, otherwise on the device specified in the config
+if strict_config is true it checks that the config passed as argument is exactly the same as the one saved in the checkpoint (usually used if there could be no checkpoint)
+if the checkpoint wasn't present it creates new model, optimizer and loss function, and returns start epoch and validation loss as None
+if the checkpoint is present and strict_config is not True the config gets updated with the one found in the checkpoint
 """
 def load_checkpoint(config, load_last, strict_config=True, load_on_cpu=False):
 	checkpoint_path = os.path.join(config['checkpoint_dir'], config['exp_name'] + ("_last_model.pt" if load_last else "_best_model.pt"))
@@ -98,20 +103,29 @@ def linearize_ast(node, tokens):
 	for child in ast.iter_child_nodes(node):
 		linearize_ast(child, tokens)
 
-	# close the node
+	# closes the node
 	tokens.append(f"){node_type}")
 
+"""
+decodes string ids to a string
+"""
 def decode_ids_to_docstring(pred_ids, tokenizer):
 	return ' '.join([tokenizer.decode(token_id, skip_special_tokens=True) for token_id in pred_ids])
 
+"""
+returns ids of a code based on dictionary passed
+"""
 def encode_code_to_ids(code_string, src_dictionary):
 	linearized_tree = []
 	linearize_ast(code_to_ast(code_string), linearized_tree)
 	return [src_dictionary.token2id.get(token, src_dictionary.token2id['[UNK]']) for token in linearized_tree]
 
+"""
+sets seed for most libraries
+"""
 def set_seed(seed=42):
 	random.seed(seed)
 	np.random.seed(seed)
 	torch.manual_seed(seed)
 	torch.cuda.manual_seed(seed)
-	torch.cuda.manual_seed_all(seed) # per multi-GPU
+	torch.cuda.manual_seed_all(seed)
