@@ -81,12 +81,13 @@ def main():
 		with open(result_file_path, mode='a', newline='', encoding='utf-8') as f:
 			writer = csv.DictWriter(f, fieldnames=results.keys())
 
-			if not file_exists: 
+			if not file_exists: # creates columns if needed
 				writer.writeheader()
 			writer.writerow(results)
 	
 	df = pd.read_csv(result_file_path)
 
+  # gets best of column with panda
 	best_row_bleu = df.loc[df['BLEU'].idxmax()]
 	best_row_rouge = df.loc[df['RougeL'].idxmax()]
 	best_row_loss = df.loc[df['Cross Validation Loss'].idxmin()]

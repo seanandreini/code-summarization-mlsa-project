@@ -7,18 +7,18 @@ class MultiHeadedAttention(nn.Module):
 		super(MultiHeadedAttention, self).__init__()
 		self.n_heads = n_heads
 		self.d_model = d_model
-		self.d_k = int(d_model / n_heads)
+		self.d_k = int(d_model / n_heads) # divides attention for every head
 		self.linear_query = nn.Linear(d_model, d_model)
 		self.linear_key = nn.Linear(d_model, d_model)
 		self.linear_value = nn.Linear(d_model, d_model)
-		self.linear_out = nn.Linear(d_model, d_model)
+		self.linear_out = nn.Linear(d_model, d_model) # to combine results of every head
 		self.dropout = nn.Dropout(p=dropout)
 		self.alphas = None
 
 	def make_chunks(self, x):
 		batch_size, seq_len = x.size(0), x.size(1)
 		# N, L, D -> N, L, n_heads * d_k
-		x = x.view(batch_size, seq_len, self.n_heads, self.d_k)
+		x = x.view(batch_size, seq_len, self.n_heads, self.d_k) # splits vector
 		# N, n_heads, L, d_k
 		x = x.transpose(1, 2)
 		return x
@@ -33,22 +33,25 @@ class MultiHeadedAttention(nn.Module):
 		# N, n_heads, L, d_k x # N, n_heads, d_k, L -> N, n_heads, L, L
 		proj_query = self.make_chunks(self.linear_query(query))
 		dot_products = torch.matmul(proj_query,
-																self.proj_key.transpose(-2, -1))
-		scores =  dot_products / np.sqrt(self.d_k)
+																self.proj_key.transpose(-2, -1)) # matrix product for every head
+		scores =  dot_products / np.sqrt(self.d_k) # scales scores
 		return scores
 
 	def attn(self, query, mask=None):
 		# Query is batch-first: N, L, D
-		# Score function will generate scores for each head
+		# score for each head
 		scores = self.score_function(query) # N, n_heads, L, L
+		
+		# very low scores for mask (padding)
 		if mask is not None:
 				scores = scores.masked_fill(mask == 0, -1e9)
+				
 		alphas = F.softmax(scores, dim=-1) # N, n_heads, L, L
-		alphas = self.dropout(alphas)
+		alphas = self.dropout(alphas) # casual dropout
 		self.alphas = alphas.detach()
 
 		# N, n_heads, L, L x N, n_heads, L, d_k -> N, n_heads, L, d_k
-		context = torch.matmul(alphas, self.proj_value)
+		context = torch.matmul(alphas, self.proj_value) # creates context vector
 		return context
 
 	def output_function(self, contexts):
@@ -70,78 +73,29 @@ class MultiHeadedAttention(nn.Module):
 		# N, L, d_model
 		out = self.output_function(context)
 		return out
-	
-
-class EncoderSelfAttn(nn.Module):
-	def __init__(self, n_heads, d_model, ff_units, n_features=None):
-		super().__init__()
-		self.n_heads = n_heads
-		self.d_model = d_model
-		self.ff_units = ff_units
-		self.n_features = n_features
-		self.self_attn_heads = MultiHeadedAttention(n_heads, d_model)
-		self.ffn = nn.Sequential(
-			nn.Linear(d_model, ff_units),
-			nn.ReLU(),
-			nn.Linear(ff_units, d_model),
-		)
-
-	def forward(self, query, mask=None):
-		self.self_attn_heads.init_keys(query)
-		att = self.self_attn_heads(query, mask)
-		out = self.ffn(att)
-		return out
-
-class DecoderSelfAttn(nn.Module):
-	def __init__(self, n_heads, d_model, ff_units, n_features=None):
-		super().__init__()
-		self.n_heads = n_heads
-		self.d_model = d_model
-		self.ff_units = ff_units
-		self.n_features = d_model if n_features is None else n_features
-		self.self_attn_heads = MultiHeadedAttention(n_heads, d_model)
-		self.cross_attn_heads = MultiHeadedAttention(n_heads, d_model)
-		self.ffn = nn.Sequential(
-			nn.Linear(d_model, ff_units),
-			nn.ReLU(),
-			nn.Linear(ff_units, self.n_features),
-		)
-
-	def init_keys(self, states):
-		self.cross_attn_heads.init_keys(states)
-
-	def forward(self, query, source_mask=None, target_mask=None):
-		self.self_attn_heads.init_keys(query)
-		att1 = self.self_attn_heads(query, target_mask)
-		att2 = self.cross_attn_heads(att1, source_mask)
-		out = self.ffn(att2)
-		return out
-	
 class PositionalEncoding(nn.Module):
 	def __init__(self, d_model, max_len=100):
 		super().__init__()
 		self.d_model = d_model
-		self.register_buffer('pe', self._create_pe(max_len, d_model), persistent=False)
+		self.register_buffer('pe', self._create_pe(max_len, d_model), persistent=False) # table on gpu memory
 
 	def _create_pe(self, length, d_model):
-		"""Funzione helper per generare la matrice dei seni e coseni"""
 		pe = torch.zeros(length, d_model)
-		position = torch.arange(0, length).float().unsqueeze(1)
-		angular_speed = torch.exp(torch.arange(0, d_model, 2).float() * (-np.log(10000.0) / d_model))
-		pe[:, 0::2] = torch.sin(position * angular_speed)
-		pe[:, 1::2] = torch.cos(position * angular_speed)
-		return pe.unsqueeze(0) # Dimensioni: (1, L, D)
+		position = torch.arange(0, length).float().unsqueeze(1) # column of values
+		angular_speed = torch.exp(torch.arange(0, d_model, 2).float() * (-np.log(10000.0) / d_model)) # how quick cos and sin will change (fast for the first ones)
+		pe[:, 0::2] = torch.sin(position * angular_speed) # sin for even
+		pe[:, 1::2] = torch.cos(position * angular_speed) # cos for odd
+		return pe.unsqueeze(0)
 
 	def forward(self, x):
 		seq_len = x.size(1)
-		
-		# CONTROLLO DINAMICO: se x è più lungo di pe, espando pe
+		# creates new table if input is larger than the one created at initialization
 		if seq_len > self.pe.size(1):
-			# Creiamo una nuova PE lunga quanto serve (o anche un po' di più per sicurezza)
 			self.pe = self._create_pe(seq_len, self.d_model).to(x.device)
 
+		# makes it so positional encoding wont drown scores
 		scaled_x = x * np.sqrt(self.d_model)
-		# Ora lo slicing [:seq_len] non andrà mai più in errore
+		# combines positional encoding and score
 		encoded = scaled_x + self.pe[:, :seq_len, :]
 		return encoded
 	
@@ -166,22 +120,22 @@ class EncoderLayer(nn.Module):
 		self.drop2 = nn.Dropout(dropout)
 
 	def forward(self, query, mask=None):
-		# Sublayer #0
-		# Norm
+		# sublayer #0
+		
 		norm_query = self.norm1(query)
 		# Multi-headed Attention
 		self.self_attn_heads.init_keys(norm_query)
 		states = self.self_attn_heads(norm_query, mask)
-		# Add
-		att = query + self.drop1(states)
+		
+		att = query + self.drop1(states) # residual connection
 
 		# Sublayer #1
-		# Norm
+		
 		norm_att = self.norm2(att)
 		# Feed Forward
 		out = self.ffn(norm_att)
-		# Add
-		out = att + self.drop2(out)
+		
+		out = att + self.drop2(out) # residual connection
 		return out
 		
 class EncoderTransf(nn.Module):
@@ -191,7 +145,7 @@ class EncoderTransf(nn.Module):
 		self.pe = PositionalEncoding(self.d_model)
 		self.norm = nn.LayerNorm(self.d_model)
 		self.layers = nn.ModuleList([copy.deepcopy(encoder_layer)
-																	for _ in range(n_layers)])
+																	for _ in range(n_layers)]) # creates an encoderlayer for number of layers
 
 	def forward(self, query, mask=None):
 		# Positional Encoding
@@ -208,9 +162,9 @@ class DecoderLayer(nn.Module):
 		self.d_model = d_model
 		self.ff_units = ff_units
 		self.self_attn_heads = MultiHeadedAttention(n_heads, d_model,
-																								dropout=dropout)
+																								dropout=dropout) # attention of decoder
 		self.cross_attn_heads = MultiHeadedAttention(n_heads, d_model,
-																									dropout=dropout)
+																									dropout=dropout) # attention back to encoder
 		self.ffn = nn.Sequential(
 			nn.Linear(d_model, ff_units),
 			nn.ReLU(),
@@ -262,7 +216,7 @@ class DecoderTransf(nn.Module):
 		self.pe = PositionalEncoding(self.d_model)
 		self.norm = nn.LayerNorm(self.d_model)
 		self.layers = nn.ModuleList([copy.deepcopy(decoder_layer)
-																	for _ in range(n_layers)])
+																	for _ in range(n_layers)]) # decoder layer for number of layers
 
 	def init_keys(self, states):
 		for layer in self.layers:
@@ -285,6 +239,7 @@ class EncoderDecoderSelfAttn(nn.Module):
 		self.bos_token_id = bos_token_id
 		self.eos_token_id = eos_token_id
 
+	# so as not to see next words
 	@staticmethod
 	def subsequent_mask(size):
 		attn_shape = (1, size, size)
@@ -325,28 +280,16 @@ class EncoderDecoderSelfAttn(nn.Module):
 		return outputs
 
 	def forward(self, input_seq, target_seq=None, source_mask=None):
-		"""
-		input_seq: indici del codice sorgente
-		target_seq: indici del commento (opzionale, usato solo in training)
-		"""
-		# 1. Encoding del codice
 		self.encode(input_seq, source_mask)
 		
-		# 2. Scelta tra Training (decodifica parallela) o Inference (un token alla volta)
 		if target_seq is not None:
-			# In training usiamo il commento "shifted" (insegnante forzato)
-			# Se target_seq è [BOS, A, B, C, EOS], diamo in pasto al decoder [BOS, A, B, C]
-			# La maschera si occupa di non far vedere il futuro
 			sz = target_seq.shape[1]
-	
-			# 2. Creiamo la maschera "al volo"
-			# È FONDAMENTALE passargli il device del modello
+
+			# creates mask to obscure last word
 			device = target_seq.device 
 			mask = self.subsequent_mask(sz).to(device).bool()
 			outputs = self.decode(target_seq, source_mask, mask)
 		else:
-			print("not training")
-			# In test/predizione generiamo autoregressivamente
 			outputs = self.predict(input_seq, source_mask)
 
 		return outputs
@@ -398,46 +341,45 @@ def build_transformer_model(config):
 """function to predict the ids from an input sequence (returns the ids, not the decoded string)"""
 def predict_ids(model, input_seq, config, max_length=50):
 	if len(input_seq) == 0:
-			return None
+		return None
 	model.eval()
 	device = next(model.parameters()).device
 
 	input_tensor = torch.tensor(input_seq, dtype=torch.long).unsqueeze(0).to(device)
 	
+	# builds source mask on padding
 	source_mask = (input_tensor != config['src_pad_token_id']).unsqueeze(1)
 	with torch.no_grad():
-			encoder_memory = model.encode(input_tensor, source_mask)
+		encoder_memory = model.encode(input_tensor, source_mask) # gets saved automatically in decoder_init
 
-	# 2. Inizializziamo la sequenza col token BOS
-	# Per il Transformer, 'inputs' crescerà nel loop: [1, 1] -> [1, 2] -> [1, 3]...
+	# initiates with BOS
 	inputs = torch.tensor([[config['tgt_bos_token_id']]], dtype=torch.long).to(device)
 
 	pred_ids = []
-	for i in range(max_length):
-			# 3. Creiamo la maschera per la sequenza generata finora
-			curr_sz = inputs.size(1)
-			trg_mask = model.subsequent_mask(curr_sz).to(device).bool()
+	for _ in range(max_length):
+		# mask for not cheating
+		curr_sz = inputs.size(1)
+		trg_mask = model.subsequent_mask(curr_sz).to(device).bool()
 
-			# 4. Decoder Forward
-			# Passiamo tutta la sequenza 'inputs' e la 'encoder_memory'
-			with torch.no_grad():
-					out = model.decode(inputs, source_mask, trg_mask) # Assicurati che riceva anche encoder_memory se necessario dal tuo metodo
-					
-					# Prendiamo i logits dell'ULTIMO step temporale
-					logits = out[:, -1, :]
-					
-					# 5. Sampling (Multinomial) come facevi prima
-					temperature = 0.7
-					probs = torch.softmax(logits / temperature, dim=-1)
-					next_token_id = torch.multinomial(probs, 1).item()
-
-			if next_token_id == config['tgt_eos_token_id']:
-					break
-					
-			pred_ids.append(next_token_id)
+		with torch.no_grad():
+			out = model.decode(inputs, source_mask, trg_mask)
 			
-			# 6. IMPORTANTE: Concateniamo il nuovo token a quelli precedenti
-			next_token_tensor = torch.tensor([[next_token_id]], dtype=torch.long).to(device)
-			inputs = torch.cat([inputs, next_token_tensor], dim=1)
+			# gets logits of last step
+			logits = out[:, -1, :]
+			
+			# multinomial sampling
+			temperature = 0.7
+			probs = torch.softmax(logits / temperature, dim=-1)
+			next_token_id = torch.multinomial(probs, 1).item()
+
+		# stops if predicts EOS
+		if next_token_id == config['tgt_eos_token_id']:
+			break
+				
+		pred_ids.append(next_token_id)
+		
+		# since transformer needs the whole sequence we're concatenating
+		next_token_tensor = torch.tensor([[next_token_id]], dtype=torch.long).to(device)
+		inputs = torch.cat([inputs, next_token_tensor], dim=1)
 	
 	return pred_ids
