@@ -9,9 +9,10 @@ The whole project contains not only the final models, but all the research done 
 - ```data/```: contains the data used by the project.
   - ```raw/```: contains the raw unedited dataset downloaded from CodeXGLUE.
   - ```processed/```: this folder too is ignored by github so as to reduce the repository size. This contains the tokenized dataset, ready to be used by the models. There's a folder for every type of tokenization.
-- ```models/```: this contains the final models, which are going to be used by the scripts. 
 - ```notebooks/```: the jupyter notebooks used to research various models and configurations to find the best final models submitted.
+- ```report/```: contains the pdf report.
 - ```scripts/```: scripts to train and inference the models.
+- ```src/```: python files defining model classes, utilities, etc.
 
 
 ## Download
